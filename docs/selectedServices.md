@@ -90,12 +90,13 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 
 | Test | Servicios Involucrados | Que Valida |
 |------|----------------------|------------|
-| `AuthIdentityIntegrationTest` | auth -> identity | Login exitoso crea mapeo en identity vault |
-| `FormToPromotionKafkaTest` | form -> Kafka -> promotion | Envio de survey dispara procesamiento de estado |
-| `PromotionToNotificationKafkaTest` | promotion -> Kafka -> notification | Cambio de estado genera notificacion |
-| `NotificationWithAuthPermissionsTest` | notification -> auth | Notification service consulta permisos antes de alertar |
-| `GatewayRedisIntegrationTest` | gateway + Redis | Token valido en Redis permite acceso |
-| `PromotionNeo4jTracingTest` | promotion + Neo4j | Creacion de nodos y aristas de contacto en grafo |
+| `AuthIdentityIntegrationTest` | auth -> identity | Login exitoso crea mapeo anonimo; login fallido NO llama a identity service (demuestra el corte temprano de la cadena de autenticacion) |
+| `FormToPromotionKafkaTest` | form -> Kafka -> promotion | Envio de survey con/sin sintomas emite evento `survey.submitted` con flag `hasSymptoms`; aprobacion de certificado emite `certificate.validated` con estado APPROVED |
+| `PromotionToNotificationKafkaTest` | promotion -> Kafka -> notification | Estado CONFIRMED emite `promotion.status.changed` + `alert.priority` (con affectedCount y eventType); estado SUSPECT solo emite `promotion.status.changed` sin alerta de prioridad |
+| `GatewayRedisIntegrationTest` | gateway + Redis | Token GREEN permite acceso; token RED (CONTAGIED) deniega acceso; token invalido/manipulado deniega acceso |
+| `PromotionNeo4jTracingTest` | promotion + Neo4j | `recordEncounter` delega correctamente al repository; `detectAndFormCircles` ejecuta query Cypher con filtro de duracion > 300s, cluster >= 3 usuarios y MERGE de Circle |
+
+> **Configuracion de Tests**: Se configuro **H2 en memoria** para los tests de `form-service` mediante el archivo `services/circleguard-form-service/src/test/resources/application.yml`, permitiendo ejecutar las pruebas de integracion sin depender de PostgreSQL real.
 
 ### C. Pruebas E2E con Newman (5+ nuevas)
 
@@ -123,15 +124,16 @@ Todo el trabajo de pipelines, Kubernetes, pruebas y automatizacion se mantendra 
 ```
 circle-guard-public/
 ├── docs/
-│   └── selectedServices.md          # Este documento
-├── locust/
-│   └── locustfile.py                # Pruebas de rendimiento con Locust
-├── postman/
-│   └── e2e-tests-collection.json    # Coleccion de pruebas E2E para Newman
+│   └── selectedServices.md              # Este documento
+├── tests/
+│   ├── postman/
+│   │   ├── circle-guard-e2e-collection.json    # Coleccion de pruebas E2E para Newman
+│   │   └── circle-guard-environment.json       # Environment de Postman (variables)
+│   └── locustfile.py                    # Pruebas de rendimiento con Locust
 ├── k8s/
-│   ├── dev/                         # Manifiestos para dev environment
-│   ├── stage/                       # Manifiestos para stage environment
-│   └── master/                      # Manifiestos para master environment
+│   ├── dev/                             # Manifiestos para dev environment
+│   ├── stage/                           # Manifiestos para stage environment
+│   └── master/                          # Manifiestos para master environment
 ├── jenkins/
 │   ├── dev/
 │   │   ├── Jenkinsfile-auth             # Pipeline dev para auth-service
@@ -151,8 +153,8 @@ circle-guard-public/
 │   ├── circleguard-promotion-service/
 │   ├── circleguard-notification-service/
 │   ├── circleguard-gateway-service/
-│   ├── circleguard-file-service/    # No seleccionado
-│   └── circleguard-dashboard-service/ # No seleccionado
+│   ├── circleguard-file-service/        # No seleccionado
+│   └── circleguard-dashboard-service/   # No seleccionado
 └── ... (archivos existentes del proyecto)
 ```
 

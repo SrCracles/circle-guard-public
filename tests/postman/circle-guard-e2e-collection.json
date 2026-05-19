@@ -1,0 +1,393 @@
+{
+  "info": {
+    "_postman_id": "circle-guard-e2e-001",
+    "name": "CircleGuard E2E Tests",
+    "description": "End-to-end tests for CircleGuard microservices covering authentication, health surveys, campus access, and health status flows.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - Auth Flow",
+      "item": [
+        {
+          "name": "Login - Staff Guard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has token and anonymousId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('token');",
+                  "    pm.expect(jsonData).to.have.property('anonymousId');",
+                  "    pm.expect(jsonData).to.have.property('type', 'Bearer');",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('jwt_token', jsonData.token);",
+                  "pm.environment.set('anonymous_id', jsonData.anonymousId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"staff_guard\", \"password\": \"password\"}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/api/v1/auth/login",
+              "host": ["{{auth_base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Generate QR Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has qrToken', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('qrToken');",
+                  "    pm.expect(jsonData).to.have.property('expiresIn', '60');",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('qr_token', jsonData.qrToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_base_url}}/api/v1/auth/qr/generate",
+              "host": ["{{auth_base_url}}"],
+              "path": ["api", "v1", "auth", "qr", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Login - Invalid Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test('Response has error message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('message', 'Invalid username or password');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"invalid_user\", \"password\": \"wrongpass\"}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/api/v1/auth/login",
+              "host": ["{{auth_base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Health Survey Flow",
+      "item": [
+        {
+          "name": "Submit Survey - With Symptoms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Survey has id and anonymousId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('anonymousId');",
+                  "    pm.expect(jsonData).to.have.property('hasFever', true);",
+                  "    pm.expect(jsonData).to.have.property('hasCough', true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"anonymousId\": \"{{anonymous_id}}\", \"hasFever\": true, \"hasCough\": true, \"otherSymptoms\": \"Headache, fatigue\", \"responses\": {\"q1\": \"YES\", \"q2\": \"YES\"}}"
+            },
+            "url": {
+              "raw": "{{form_base_url}}/api/v1/surveys",
+              "host": ["{{form_base_url}}"],
+              "path": ["api", "v1", "surveys"]
+            }
+          }
+        },
+        {
+          "name": "Submit Survey - No Symptoms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Survey has no symptoms', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('hasFever', false);",
+                  "    pm.expect(jsonData).to.have.property('hasCough', false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"anonymousId\": \"{{anonymous_id}}\", \"hasFever\": false, \"hasCough\": false, \"responses\": {\"q1\": \"NO\", \"q2\": \"NO\"}}"
+            },
+            "url": {
+              "raw": "{{form_base_url}}/api/v1/surveys",
+              "host": ["{{form_base_url}}"],
+              "path": ["api", "v1", "surveys"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Campus Access Flow",
+      "item": [
+        {
+          "name": "Validate QR - Valid Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Validation result has expected structure', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('valid');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('message');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"{{qr_token}}\"}"
+            },
+            "url": {
+              "raw": "{{gateway_base_url}}/api/v1/gate/validate",
+              "host": ["{{gateway_base_url}}"],
+              "path": ["api", "v1", "gate", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Validate QR - Invalid Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Invalid token returns RED status', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.valid).to.eql(false);",
+                  "    pm.expect(jsonData.status).to.eql('RED');",
+                  "    pm.expect(jsonData.message).to.contain('Invalid');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"token\": \"invalid.token.here\"}"
+            },
+            "url": {
+              "raw": "{{gateway_base_url}}/api/v1/gate/validate",
+              "host": ["{{gateway_base_url}}"],
+              "path": ["api", "v1", "gate", "validate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Health Status Flow",
+      "item": [
+        {
+          "name": "Login - Health Center Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set('admin_jwt_token', jsonData.token);",
+                  "pm.environment.set('admin_anonymous_id', jsonData.anonymousId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\": \"health_user\", \"password\": \"password\"}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/api/v1/auth/login",
+              "host": ["{{auth_base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Positive Case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_jwt_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"anonymousId\": \"{{anonymous_id}}\"}"
+            },
+            "url": {
+              "raw": "{{promotion_base_url}}/api/v1/health/confirmed",
+              "host": ["{{promotion_base_url}}"],
+              "path": ["api", "v1", "health", "confirmed"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
