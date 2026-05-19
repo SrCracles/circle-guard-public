@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_USER = 'srcracles'
+        SERVICE_NAME = 'circleguard-promotion-service'
+        SERVICE_PORT = '8088'
+        DOCKER_IMAGE = "${DOCKER_USER}/${SERVICE_NAME}"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Test') {
+            steps {
+                bat '.\\gradlew.bat :services:%SERVICE_NAME%:test'
+            }
+            post {
+                always {
+                    junit "services/%SERVICE_NAME%/build/test-results/test/*.xml"
+                }
+            }
+        }
+        stage('Build JAR') {
+            steps {
+                bat '.\\gradlew.bat :services:%SERVICE_NAME%:bootJar'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                bat "docker build -t %DOCKER_IMAGE%:%BUILD_NUMBER% -t %DOCKER_IMAGE%:latest services/%SERVICE_NAME%/"
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                    bat "docker push %DOCKER_IMAGE%:%BUILD_NUMBER%"
+                    bat "docker push %DOCKER_IMAGE%:latest"
+                }
+            }
+        }
+        stage('Deploy to Kind Dev') {
+            steps {
+                bat "kubectl set image deployment/%SERVICE_NAME% %SERVICE_NAME%=%DOCKER_IMAGE%:%BUILD_NUMBER% -n dev"
+                bat "kubectl rollout status deployment/%SERVICE_NAME% -n dev --timeout=120s"
+            }
+        }
+    }
+    post {
+        failure {
+            echo "Pipeline failed for ${SERVICE_NAME}"
+        }
+        success {
+            echo "Pipeline succeeded for ${SERVICE_NAME}"
+        }
+    }
+}

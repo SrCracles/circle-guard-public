@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_USER = 'srcracles'
+        VERSION = "${env.BUILD_NUMBER}"
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Build & Push Release Images') {
+            steps {
+                script {
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service'
+                    ]
+                    for (svc in services) {
+                        bat ".\\gradlew.bat :services:${svc}:bootJar"
+                        bat "docker build -t ${DOCKER_USER}/${svc}:${VERSION} -t ${DOCKER_USER}/${svc}:latest services/${svc}/"
+                        withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                            bat "docker push ${DOCKER_USER}/${svc}:${VERSION}"
+                            bat "docker push ${DOCKER_USER}/${svc}:latest"
+                        }
+                    }
+                }
+            }
+        }
+        stage('Deploy to Kind Master') {
+            steps {
+                script {
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service'
+                    ]
+                    for (svc in services) {
+                        bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:${VERSION} -n master"
+                    }
+                }
+                bat 'kubectl rollout status deployment -n master --timeout=300s'
+            }
+        }
+        stage('Git Tag Release') {
+            steps {
+                bat "git tag -a v%VERSION% -m \"Release v%VERSION%\""
+                bat "git push origin v%VERSION%"
+            }
+        }
+    }
+    post {
+        success {
+            echo "Release v${VERSION} deployed to master namespace"
+        }
+        failure {
+            echo "Master pipeline failed. Rollback may be required."
+        }
+    }
+}

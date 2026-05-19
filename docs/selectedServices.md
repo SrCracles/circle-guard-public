@@ -88,34 +88,34 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 
 ### B. Pruebas de Integracion (5+ nuevas)
 
-| Test | Servicios Involucrados | Que Valida |
-|------|----------------------|------------|
-| `AuthIdentityIntegrationTest` | auth -> identity | Login exitoso crea mapeo anonimo; login fallido NO llama a identity service (demuestra el corte temprano de la cadena de autenticacion) |
-| `FormToPromotionKafkaTest` | form -> Kafka -> promotion | Envio de survey con/sin sintomas emite evento `survey.submitted` con flag `hasSymptoms`; aprobacion de certificado emite `certificate.validated` con estado APPROVED |
-| `PromotionToNotificationKafkaTest` | promotion -> Kafka -> notification | Estado CONFIRMED emite `promotion.status.changed` + `alert.priority` (con affectedCount y eventType); estado SUSPECT solo emite `promotion.status.changed` sin alerta de prioridad |
-| `GatewayRedisIntegrationTest` | gateway + Redis | Token GREEN permite acceso; token RED (CONTAGIED) deniega acceso; token invalido/manipulado deniega acceso |
-| `PromotionNeo4jTracingTest` | promotion + Neo4j | `recordEncounter` delega correctamente al repository; `detectAndFormCircles` ejecuta query Cypher con filtro de duracion > 300s, cluster >= 3 usuarios y MERGE de Circle |
+| Test | Servicios Involucrados | Que Valida | Por Que Es Importante |
+|------|----------------------|------------|----------------------|
+| `AuthIdentityIntegrationTest` | auth -> identity | Login exitoso crea mapeo anonimo; login fallido NO llama a identity service (demuestra el corte temprano de la cadena de autenticacion) | Garantiza que la separacion de responsabilidades entre autenticacion e identidad funcione correctamente y evita llamadas innecesarias cuando la autenticacion falla, optimizando recursos |
+| `FormToPromotionKafkaTest` | form -> Kafka -> promotion | Envio de survey con/sin sintomas emite evento `survey.submitted` con flag `hasSymptoms`; aprobacion de certificado emite `certificate.validated` con estado APPROVED | Valida que el pipeline de eventos de salud funcione end-to-end; si Kafka falla, el sistema no puede reaccionar ante brotes |
+| `PromotionToNotificationKafkaTest` | promotion -> Kafka -> notification | Estado CONFIRMED emite `promotion.status.changed` + `alert.priority` (con affectedCount y eventType); estado SUSPECT solo emite `promotion.status.changed` sin alerta de prioridad | Asegura que las alertas se generen con la gravedad adecuada: un caso confirmado debe disparar notificaciones prioritarias, mientras que un sospechoso no debe generar panico innecesario |
+| `GatewayRedisIntegrationTest` | gateway + Redis | Token GREEN permite acceso; token RED (CONTAGIED) deniega acceso; token invalido/manipulado deniega acceso | Protege la barrera fisica del campus; si Redis retorna un estado incorrecto o el gateway no valida bien, usuarios contagiosos podrian ingresar |
+| `PromotionNeo4jTracingTest` | promotion + Neo4j | `recordEncounter` delega correctamente al repository; `detectAndFormCircles` ejecuta query Cypher con filtro de duracion > 300s, cluster >= 3 usuarios y MERGE de Circle | El rastreo de contactos es el nucleo del sistema; un error en la creacion de nodos o en la logica de deteccion de circulos invalidaria todo el modelo de contencion |
 
 > **Configuracion de Tests**: Se configuro **H2 en memoria** para los tests de `form-service` mediante el archivo `services/circleguard-form-service/src/test/resources/application.yml`, permitiendo ejecutar las pruebas de integracion sin depender de PostgreSQL real.
 
 ### C. Pruebas E2E con Newman (5+ nuevas)
 
-| Flujo E2E | Descripcion |
-|-----------|-------------|
-| **Flujo de Autenticacion** | Registro -> Login -> Obtencion de JWT -> Validacion de token |
-| **Flujo de Formulario de Salud** | Autenticacion -> Envio de survey -> Verificacion de recepcion |
-| **Flujo de Promocion de Estado** | Envio de survey con sintomas -> Consulta de estado actualizado |
-| **Flujo de Notificacion** | Promocion a CONFIRMED -> Verificacion de generacion de alerta |
-| **Flujo de Acceso al Campus** | Autenticacion -> Generacion de QR -> Validacion en gateway -> Acceso permitido/denegado |
+| Flujo E2E | Que Valida | Por Que Es Importante |
+|-----------|------------|----------------------|
+| **Flujo de Autenticacion** | Login con credenciales validas retorna JWT y anonymousId; login con credenciales invalidas retorna 401 con mensaje de error; generacion de QR token con JWT valido retorna token con expiracion de 60s | Es la puerta de entrada al sistema; si falla, ningun usuario puede acceder a ningun servicio |
+| **Flujo de Formulario de Salud** | Envio de survey con sintomas persiste `hasFever=true` y `hasCough=true`; envio sin sintomas persiste ambos en `false`; el sistema acepta campos JSON arbitrarios en `responses` | La precision de los datos de salud determina si el sistema detecta o no un brote; un survey mal procesado podria ocultar un caso positivo |
+| **Flujo de Promocion de Estado** | Admin con rol HEALTH_CENTER puede actualizar estado a CONFIRMED via `/api/v1/health/confirmed`; el cambio de estado dispara eventos Kafka correctamente | Solo personal autorizado debe poder confirmar casos; si esto falla, cualquier usuario podria alterar estados y generar falsas alertas |
+| **Flujo de Notificacion** | Estado CONFIRMED genera evento `alert.priority` con `affectedCount` y `eventType`; el notification-service consume el evento y genera la alerta correspondiente | La cadena de notificacion es critica para la respuesta ante brotes; un fallo aqui deja a la comunidad sin avisar |
+| **Flujo de Acceso al Campus** | QR valido permite acceso (GREEN); QR manipulado o invalido deniega acceso (RED); token expirado o sin JWT en headers deniega acceso | Es la ultima linea de defensa fisica; un fallo aqui pone en riesgo la salud de toda la comunidad del campus |
 
 ### D. Pruebas de Rendimiento con Locust
 
-| Escenario | Metricas Clave |
-|-----------|---------------|
-| **Login masivo** (auth-service) | Tiempo de respuesta, throughput, tasa de errores |
-| **Envio concurrente de surveys** (form-service) | Latencia bajo carga, manejo de picos |
-| **Procesamiento de Kafka** (promotion-service) | Throughput de mensajes, latencia end-to-end |
-| **Validacion de QR en puerta** (gateway-service) | Respuesta < 100ms, concurrencia de escaneos |
+| Escenario | Que Valida | Por Que Es Importante |
+|-----------|------------|----------------------|
+| **Login masivo** (auth-service) | Tiempo de respuesta < 500ms bajo 100 usuarios concurrentes, throughput > 50 req/s, tasa de errores < 1% | En horarios pico (entrada de clases) cientos de usuarios intentan loguearse simultaneamente; latencia alta genera colas en las puertas |
+| **Envio concurrente de surveys** (form-service) | Latencia < 1s bajo 50 usuarios concurrentes, manejo de picos de 200 req/s sin perdida de datos | Durante una alerta de salud, todos los usuarios intentan reportar estado al mismo tiempo; el sistema no puede perder surveys |
+| **Procesamiento de Kafka** (promotion-service) | Throughput de mensajes > 100 msg/s, latencia end-to-end < 2s desde emision hasta consumo | Si Kafka se satura, los cambios de estado no se propagan y el rastreo de contactos queda desactualizado |
+| **Validacion de QR en puerta** (gateway-service) | Respuesta < 100ms, concurrencia de 200 escaneos/s sin degradacion | Los usuarios escanean QR al pasar por las puertas; mas de 100ms de latencia genera cuellos de botella fisicos |
 
 ## 5. Estructura de Carpetas del Proyecto
 
@@ -148,11 +148,17 @@ circle-guard-public/
 │       └── Jenkinsfile-master           # Pipeline master (deploy K8s + release notes)
 ├── services/
 │   ├── circleguard-auth-service/
+│   │   └── Dockerfile                   # Imagen Docker para auth-service (port 8180)
 │   ├── circleguard-identity-service/
+│   │   └── Dockerfile                   # Imagen Docker para identity-service (port 8083)
 │   ├── circleguard-form-service/
+│   │   └── Dockerfile                   # Imagen Docker para form-service (port 8086)
 │   ├── circleguard-promotion-service/
+│   │   └── Dockerfile                   # Imagen Docker para promotion-service (port 8088)
 │   ├── circleguard-notification-service/
+│   │   └── Dockerfile                   # Imagen Docker para notification-service (port 8082)
 │   ├── circleguard-gateway-service/
+│   │   └── Dockerfile                   # Imagen Docker para gateway-service (port 8087)
 │   ├── circleguard-file-service/        # No seleccionado
 │   └── circleguard-dashboard-service/   # No seleccionado
 └── ... (archivos existentes del proyecto)
