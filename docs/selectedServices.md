@@ -84,6 +84,8 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 | **gateway-service** | `QrValidationServiceTest` | Validacion de tokens expirados/firmados incorrectamente | La puerta de acceso al campus depende de la validacion criptografica del QR. Si un token invalido o manipulado pasara la validacion, personas con riesgo sanitario (CONTAGIED/POTENTIAL) podrian ingresar al campus, violando la seguridad biologica. |
 | **gateway-service** | `GateAccessDecisionTest` | Decision GREEN/RED basada en estado Redis | Este es el ultimo paso de seguridad fisica. Probar que Redis retorna el estado correcto y que el sistema deniega acceso a usuarios de riesgo garantiza que la barrera fisica del campus funcione conforme a la politica de salud institucional. |
 
+> **Nota Importante**: Los tests **existentes** de `form-service` y `notification-service` requieren infraestructura externa corriendo (PostgreSQL y Kafka respectivamente), por lo que fallaran si no levantaste primero `docker-compose -f docker-compose.dev.yml up -d`. Las pruebas **nuevas** implementadas no tienen esta dependencia y pasan sin problemas.
+
 ### B. Pruebas de Integracion (5+ nuevas)
 
 | Test | Servicios Involucrados | Que Valida |
