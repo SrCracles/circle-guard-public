@@ -1,0 +1,180 @@
+# Microservicios Seleccionados para Pruebas y Release
+
+## 1. Los 6 Microservicios Escogidos
+
+Basandose en el criterio del taller (*"que se comuniquen entre si para permitir la posterior implementacion de pruebas que los involucren"*), estos son los 6 microservicios seleccionados:
+
+| # | Microservicio | Puerto | Justificacion |
+|---|--------------|--------|---------------|
+| 1 | **circleguard-auth-service** | `8180` | Punto de entrada de autenticacion. Se comunica via HTTP con **identity-service**. Ideal para tests de integracion HTTP. |
+| 2 | **circleguard-identity-service** | `8083` | Vault de identidades. Recibe llamadas de **auth-service** y produce eventos Kafka (`audit.identity.accessed`). Tiene encriptacion y logica de anonimizacion interesante para testear. |
+| 3 | **circleguard-form-service** | `8086` | Motor de formularios de salud. **Produce** eventos Kafka (`survey.submitted`, `certificate.validated`) que alimentan a promotion-service. Tiene tests unitarios e integracion existentes. |
+| 4 | **circleguard-promotion-service** | `8088` | **El corazon del sistema**. Consume Kafka de form-service, usa Neo4j para grafos de contacto, produce Kafka para notification-service. Tiene tests de performance con Testcontainers. |
+| 5 | **circleguard-notification-service** | `8082` | **Consume** Kafka de promotion-service y hace llamadas HTTP a **auth-service** para validar permisos. Multi-canal (email/SMS/push). Ideal para tests de integracion end-to-end. |
+| 6 | **circleguard-gateway-service** | `8087` | Validacion de QR para acceso fisico al campus. Usa **Redis** para estado de tokens. Es un flujo de usuario real y diferente (no usa Kafka ni BD relacional), aporta variedad al pipeline. |
+
+## 2. Microservicios NO Escogidos
+
+| Microservicio | Puerto | Razon de Exclusion |
+|--------------|--------|-------------------|
+| **circleguard-file-service** | `8085` | Es completamente standalone, no se comunica con ningun otro servicio. No aporta valor para pruebas de integracion ni E2E entre servicios. |
+| **circleguard-dashboard-service** | `8084` | Aunque lee de promotion-service, es un consumidor pasivo de analytics. No genera eventos ni afecta el flujo core de negocio. Su exclusion permite enfocar las pruebas en los flujos transaccionales criticos. |
+
+## 3. Flujos de Comunicacion que Podemos Probar
+
+### Diagrama de Comunicacion entre Servicios Seleccionados
+
+```
++-------------+     HTTP      +-----------------+
+|   Auth      |-------------->|    Identity     |
+|  Service    |<--------------|    Service      |
++-------------+               +-----------------+
+       ^                              |
+       | HTTP (permisos)              | Kafka
+       |                              v
++-----------------+          +-----------------+
+|  Notification   |<--Kafka---|    Identity     |
+|    Service      |          |   (audit log)   |
++-----------------+          +-----------------+
+       ^
+       | Kafka
+       |
++-----------------+     Kafka      +-----------------+
+|   Promotion     |<---------------|      Form       |
+|    Service      |                |    Service      |
+|   (Neo4j)       |--------------->|                 |
++-----------------+   (survey/cert)+-----------------+
+```
+
+### Flujo E2E Completo que Validaremos
+
+1. **Autenticacion**: Usuario se autentica (`auth-service` -> `identity-service`)
+2. **Formulario de Salud**: Usuario envia formulario de salud (`form-service`)
+3. **Promocion de Estado**: El estado de salud se procesa y promueve (`promotion-service` procesa en Neo4j)
+4. **Notificacion**: Se generan alertas multi-canal (`notification-service` consume Kafka y consulta permisos a `auth-service`)
+5. **Acceso al Campus**: Usuario escanea QR en puerta (`gateway-service` valida en Redis)
+
+### Patrones de Comunicacion Identificados
+
+| Tipo | Origen | Destino | Tecnologia | Proposito |
+|------|--------|---------|------------|-----------|
+| Sincrono HTTP | auth-service | identity-service | RestTemplate | Mapeo de identidades anonimas |
+| Sincrono HTTP | notification-service | auth-service | RestTemplate | Validacion de permisos de alerta |
+| Asincrono Kafka | form-service | promotion-service | Kafka | Disparar promocion de estado ante survey |
+| Asincrono Kafka | form-service | promotion-service | Kafka | Restaurar acceso ante certificado validado |
+| Asincrono Kafka | promotion-service | notification-service | Kafka | Notificar cambio de estado |
+| Asincrono Kafka | promotion-service | notification-service | Kafka | Alertar administradores de brotes |
+| Asincrono Kafka | promotion-service | notification-service | Kafka | Cancelar reservas de espacios |
+| Cache | gateway-service | Redis | Spring Data Redis | Validar tokens QR de acceso |
+
+## 4. Tests Propuestos a Implementar
+
+### A. Pruebas Unitarias (5+ nuevas)
+
+| Servicio | Test Propuesto | Que Valida | Por que es Importante |
+|----------|---------------|------------|----------------------|
+| **auth-service** | `JwtTokenServiceTest` | Generacion y validacion de tokens JWT (claims, expiracion, firma) | El JWT es el mecanismo central de autenticacion stateless de toda la plataforma. Un bug en la generacion o validacion del token comprometeria la seguridad de todos los servicios, permitiendo accesos no autorizados o sesiones invalidas. |
+| **auth-service** | `DualChainAuthenticationProviderTest` | Login fallback LDAP vs local | La autenticacion dual (LDAP universitario + base de datos local) es un requisito funcional critico. Si el fallback no funciona correctamente, usuarios invitados o cuentas locales quedarian bloqueadas cuando LDAP este disponible o viceversa, afectando la disponibilidad del sistema. |
+| **identity-service** | `IdentityEncryptionConverterTest` | Encriptacion/desencriptacion de IDs (ya existe, ampliar) | FERPA y la privacidad del estudiante dependen de que las identidades reales nunca se expongan. Probar el cifrado garantiza que los datos en reposo sean irreversibles sin la clave correcta, cumpliendo con regulaciones de privacidad. |
+| **identity-service** | `IdentityVaultServiceTest` | Generacion de IDs anonimizados unicos y hash SHA-256 | La integridad del sistema de anonimizacion depende de que cada identidad real genere exactamente un unico ID anonimo determinista (via hash) y que nuevos usuarios reciban IDs unicos. Un fallo aqui romperia el trazado de contactos en Neo4j. |
+| **form-service** | `SymptomMapperTest` | Mapeo correcto de sintomas a niveles de riesgo | Este componente decide si un usuario debe ser marcado como sospechoso basado en sus respuestas. Un falso negativo (no detectar sintomas) retrasaria la contencion; un falso positivo generaria cuarentenas innecesarias. La precision aqui afecta directamente la metrica de "False Positive Rate < 15%". |
+| **promotion-service** | `StatusLifecycleTest` | Transiciones de estado validas (ACTIVE->SUSPECT->PROBABLE->CONFIRMED) | La maquina de estados de salud es el nucleo del negocio. Transiciones invalidas podrian dejar usuarios en estados inconsistentes, afectando la logica de notificaciones y el acceso al campus. La contencion rapida (< 60 segundos) depende de transiciones automaticas correctas. |
+| **promotion-service** | `GraphServiceTest` | Construccion correcta de queries Cypher y deteccion de circulos | Las queries Cypher en Neo4j son la base del trazado de contactos. Un error en la construccion de la query podria omitir contactos cercanos o crear falsos circulos, comprometiendo la eficacia del aislamiento y la seguridad del campus. |
+| **notification-service** | `TemplateServiceTest` | Renderizado de templates Freemarker con variables | La comunicacion de alertas de salud debe ser clara y personalizada. Probar el renderizado garantiza que los usuarios reciban mensajes con su nombre, estado correcto y enlaces funcionales, evitando confusion en momentos criticos de salud. |
+| **gateway-service** | `QrValidationServiceTest` | Validacion de tokens expirados/firmados incorrectamente | La puerta de acceso al campus depende de la validacion criptografica del QR. Si un token invalido o manipulado pasara la validacion, personas con riesgo sanitario (CONTAGIED/POTENTIAL) podrian ingresar al campus, violando la seguridad biologica. |
+| **gateway-service** | `GateAccessDecisionTest` | Decision GREEN/RED basada en estado Redis | Este es el ultimo paso de seguridad fisica. Probar que Redis retorna el estado correcto y que el sistema deniega acceso a usuarios de riesgo garantiza que la barrera fisica del campus funcione conforme a la politica de salud institucional. |
+
+### B. Pruebas de Integracion (5+ nuevas)
+
+| Test | Servicios Involucrados | Que Valida |
+|------|----------------------|------------|
+| `AuthIdentityIntegrationTest` | auth -> identity | Login exitoso crea mapeo en identity vault |
+| `FormToPromotionKafkaTest` | form -> Kafka -> promotion | Envio de survey dispara procesamiento de estado |
+| `PromotionToNotificationKafkaTest` | promotion -> Kafka -> notification | Cambio de estado genera notificacion |
+| `NotificationWithAuthPermissionsTest` | notification -> auth | Notification service consulta permisos antes de alertar |
+| `GatewayRedisIntegrationTest` | gateway + Redis | Token valido en Redis permite acceso |
+| `PromotionNeo4jTracingTest` | promotion + Neo4j | Creacion de nodos y aristas de contacto en grafo |
+
+### C. Pruebas E2E con Newman (5+ nuevas)
+
+| Flujo E2E | Descripcion |
+|-----------|-------------|
+| **Flujo de Autenticacion** | Registro -> Login -> Obtencion de JWT -> Validacion de token |
+| **Flujo de Formulario de Salud** | Autenticacion -> Envio de survey -> Verificacion de recepcion |
+| **Flujo de Promocion de Estado** | Envio de survey con sintomas -> Consulta de estado actualizado |
+| **Flujo de Notificacion** | Promocion a CONFIRMED -> Verificacion de generacion de alerta |
+| **Flujo de Acceso al Campus** | Autenticacion -> Generacion de QR -> Validacion en gateway -> Acceso permitido/denegado |
+
+### D. Pruebas de Rendimiento con Locust
+
+| Escenario | Metricas Clave |
+|-----------|---------------|
+| **Login masivo** (auth-service) | Tiempo de respuesta, throughput, tasa de errores |
+| **Envio concurrente de surveys** (form-service) | Latencia bajo carga, manejo de picos |
+| **Procesamiento de Kafka** (promotion-service) | Throughput de mensajes, latencia end-to-end |
+| **Validacion de QR en puerta** (gateway-service) | Respuesta < 100ms, concurrencia de escaneos |
+
+## 5. Estructura de Carpetas del Proyecto
+
+Todo el trabajo de pipelines, Kubernetes, pruebas y automatizacion se mantendra **dentro** del repositorio `circle-guard-public`:
+
+```
+circle-guard-public/
+├── docs/
+│   └── selectedServices.md          # Este documento
+├── locust/
+│   └── locustfile.py                # Pruebas de rendimiento con Locust
+├── postman/
+│   └── e2e-tests-collection.json    # Coleccion de pruebas E2E para Newman
+├── k8s/
+│   ├── dev/                         # Manifiestos para dev environment
+│   ├── stage/                       # Manifiestos para stage environment
+│   └── master/                      # Manifiestos para master environment
+├── jenkins/
+│   ├── dev/
+│   │   ├── Jenkinsfile-auth             # Pipeline dev para auth-service
+│   │   ├── Jenkinsfile-identity         # Pipeline dev para identity-service
+│   │   ├── Jenkinsfile-form             # Pipeline dev para form-service
+│   │   ├── Jenkinsfile-promotion        # Pipeline dev para promotion-service
+│   │   ├── Jenkinsfile-notification     # Pipeline dev para notification-service
+│   │   └── Jenkinsfile-gateway          # Pipeline dev para gateway-service
+│   ├── stage/
+│   │   └── Jenkinsfile-stage            # Pipeline stage (E2E + Locust)
+│   └── master/
+│       └── Jenkinsfile-master           # Pipeline master (deploy K8s + release notes)
+├── services/
+│   ├── circleguard-auth-service/
+│   ├── circleguard-identity-service/
+│   ├── circleguard-form-service/
+│   ├── circleguard-promotion-service/
+│   ├── circleguard-notification-service/
+│   ├── circleguard-gateway-service/
+│   ├── circleguard-file-service/    # No seleccionado
+│   └── circleguard-dashboard-service/ # No seleccionado
+└── ... (archivos existentes del proyecto)
+```
+
+## 6. Resumen de Decisiones de Arquitectura de Pipelines
+
+| Aspecto | Decision |
+|---------|----------|
+| **Orquestador** | Jenkins corriendo nativo en la PC (no en contenedor) |
+| **Runtime de Tests** | Kubernetes (Kind) gestionado via `kubectl` |
+| **Registry de Imagenes** | DockerHub (usuario: `srcracles`) |
+| **E2E Testing** | Newman CLI con colecciones Postman |
+| **Performance Testing** | Locust (Python) |
+| **Release Notes** | GitHub API con token personal |
+| **Permisos Jenkins** | Usuario `jenkins` con acceso a `kubeconfig` y permisos adecuados |
+
+## 7. Matriz de Servicios vs. Ambientes
+
+| Servicio | Dev Pipeline | Stage Pipeline | Master Pipeline |
+|----------|-------------|----------------|-----------------|
+| auth-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| identity-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| form-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| promotion-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| notification-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| gateway-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+
+> **Nota**: La infraestructura compartida (Kafka, Neo4j, PostgreSQL, Redis, Zookeeper, OpenLDAP) se levanta como parte del ambiente Stage para las pruebas E2E y de rendimiento.
