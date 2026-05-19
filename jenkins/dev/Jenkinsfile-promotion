@@ -29,20 +29,19 @@ pipeline {
         }
         stage('Build Docker Image') {
             steps {
-                bat "docker build -t %DOCKER_IMAGE%:%BUILD_NUMBER% -t %DOCKER_IMAGE%:latest services/%SERVICE_NAME%/"
+                bat "docker build -t %DOCKER_IMAGE%:dev services/%SERVICE_NAME%/"
             }
         }
-        stage('Push Docker Image') {
+        stage('Push Docker Image (dev tag)') {
             steps {
                 withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-                    bat "docker push %DOCKER_IMAGE%:%BUILD_NUMBER%"
-                    bat "docker push %DOCKER_IMAGE%:latest"
+                    bat "docker push %DOCKER_IMAGE%:dev"
                 }
             }
         }
         stage('Deploy to Kind Dev') {
             steps {
-                bat "kubectl set image deployment/%SERVICE_NAME% %SERVICE_NAME%=%DOCKER_IMAGE%:%BUILD_NUMBER% -n dev"
+                bat "kubectl set image deployment/%SERVICE_NAME% %SERVICE_NAME%=%DOCKER_IMAGE%:dev -n dev"
                 bat "kubectl rollout status deployment/%SERVICE_NAME% -n dev --timeout=120s"
             }
         }

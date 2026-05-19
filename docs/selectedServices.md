@@ -173,6 +173,7 @@ circle-guard-public/
 | **Registry de Imagenes** | DockerHub (usuario: `srcracles`) |
 | **E2E Testing** | Newman CLI con colecciones Postman |
 | **Performance Testing** | Locust (Python) |
+| **Estrategia de Tags** | `dev` -> `stage` -> `master`. Dev compila y pushea `:dev`. Stage prueba y promueve a `:stage`. Master hace pull de `:stage` y deploya. |
 | **Release Notes** | GitHub API con token personal |
 | **Permisos Jenkins** | Usuario `jenkins` con acceso a `kubeconfig` y permisos adecuados |
 

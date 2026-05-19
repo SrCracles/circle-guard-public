@@ -12,12 +12,40 @@ pipeline {
                 checkout scm
             }
         }
+        stage('Pull dev images from DockerHub') {
+            steps {
+                script {
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service'
+                    ]
+                    for (svc in services) {
+                        bat "docker pull ${DOCKER_USER}/${svc}:dev"
+                    }
+                }
+            }
+        }
         stage('Deploy to Stage Environment') {
             steps {
                 echo 'Deploying services to Kind stage namespace...'
-                bat 'kubectl apply -f k8s/stage/ -n stage'
+                script {
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service'
+                    ]
+                    for (svc in services) {
+                        bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:dev -n stage"
+                    }
+                }
                 bat 'kubectl rollout status deployment -n stage --timeout=300s'
-                // Port-forward for Newman to reach services
                 bat 'start /B kubectl port-forward svc/circleguard-auth-service 8180:8180 -n stage'
                 bat 'start /B kubectl port-forward svc/circleguard-form-service 8086:8086 -n stage'
                 bat 'start /B kubectl port-forward svc/circleguard-gateway-service 8087:8087 -n stage'
@@ -46,9 +74,24 @@ pipeline {
                 }
             }
         }
-        stage('Approval Gate') {
+        stage('Promote dev to stage tag') {
             steps {
-                input message: 'Promote to master?', ok: 'Promote'
+                script {
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service'
+                    ]
+                    for (svc in services) {
+                        bat "docker tag ${DOCKER_USER}/${svc}:dev ${DOCKER_USER}/${svc}:stage"
+                        withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                            bat "docker push ${DOCKER_USER}/${svc}:stage"
+                        }
+                    }
+                }
             }
         }
     }
@@ -58,7 +101,10 @@ pipeline {
             bat 'taskkill /F /IM kubectl.exe 2>nul || exit 0'
         }
         failure {
-            echo 'Stage pipeline failed. Review Newman and Locust reports.'
+            echo 'Stage pipeline failed. Images were NOT promoted to stage tag.'
+        }
+        success {
+            echo 'Stage pipeline succeeded. All images promoted from dev to stage tag.'
         }
     }
 }

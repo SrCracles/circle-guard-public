@@ -10,7 +10,15 @@ pipeline {
                 checkout scm
             }
         }
-        stage('Build & Push Release Images') {
+        stage('Teardown Master Environment') {
+            steps {
+                echo 'Stopping existing deployments in master namespace...'
+                bat 'kubectl delete deployment --all -n master --ignore-not-found=true'
+                bat 'kubectl delete svc --all -n master --ignore-not-found=true'
+                bat 'ping 127.0.0.1 -n 4 > nul'
+            }
+        }
+        stage('Pull stage images from DockerHub') {
             steps {
                 script {
                     def services = [
@@ -22,18 +30,15 @@ pipeline {
                         'circleguard-gateway-service'
                     ]
                     for (svc in services) {
-                        bat ".\\gradlew.bat :services:${svc}:bootJar"
-                        bat "docker build -t ${DOCKER_USER}/${svc}:${VERSION} -t ${DOCKER_USER}/${svc}:latest services/${svc}/"
-                        withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-                            bat "docker push ${DOCKER_USER}/${svc}:${VERSION}"
-                            bat "docker push ${DOCKER_USER}/${svc}:latest"
-                        }
+                        bat "docker pull ${DOCKER_USER}/${svc}:stage"
                     }
                 }
             }
         }
         stage('Deploy to Kind Master') {
             steps {
+                echo 'Deploying full architecture to master namespace...'
+                bat 'kubectl apply -f k8s/master/ -n master'
                 script {
                     def services = [
                         'circleguard-auth-service',
@@ -44,7 +49,7 @@ pipeline {
                         'circleguard-gateway-service'
                     ]
                     for (svc in services) {
-                        bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:${VERSION} -n master"
+                        bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:stage -n master"
                     }
                 }
                 bat 'kubectl rollout status deployment -n master --timeout=300s'
@@ -59,10 +64,10 @@ pipeline {
     }
     post {
         success {
-            echo "Release v${VERSION} deployed to master namespace"
+            echo "Release v${VERSION} deployed to master namespace from stage images"
         }
         failure {
-            echo "Master pipeline failed. Rollback may be required."
+            echo "Master pipeline failed. Review logs and re-run."
         }
     }
 }
