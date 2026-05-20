@@ -4,6 +4,8 @@ pipeline {
         DOCKER_USER = 'srcracles'
         VERSION = "${env.BUILD_NUMBER}"
         RELEASE_NOTES_FILE = "RELEASE_NOTES_v${env.BUILD_NUMBER}.md"
+        GITHUB_OWNER = 'SrCracles'
+        GITHUB_REPO = 'circle-guard-public'
     }
     stages {
         stage('Checkout') {
@@ -64,24 +66,6 @@ pipeline {
                         lastTag = ""
                     }
 
-                    def changelog = bat(script: """
-                        @echo off
-                        echo # Release Notes v${VERSION}
-                        echo.
-                        echo **Release Date:** %DATE% %TIME%
-                        echo.
-                        echo **Docker Images:**
-                        echo - srcracles/circleguard-auth-service:stage
-                        echo - srcracles/circleguard-identity-service:stage
-                        echo - srcracles/circleguard-form-service:stage
-                        echo - srcracles/circleguard-promotion-service:stage
-                        echo - srcracles/circleguard-notification-service:stage
-                        echo - srcracles/circleguard-gateway-service:stage
-                        echo.
-                        echo ## Changes
-                        echo.
-                    """, returnStdout: true).trim()
-
                     def features = bat(script: "git log ${lastTag}..HEAD --oneline --grep=\"^feat\\|^feature\" 2>nul || echo \"\"", returnStdout: true).trim()
                     def fixes = bat(script: "git log ${lastTag}..HEAD --oneline --grep=\"^fix\\|^bugfix\" 2>nul || echo \"\"", returnStdout: true).trim()
                     def docs = bat(script: "git log ${lastTag}..HEAD --oneline --grep=\"^docs\\|^doc\" 2>nul || echo \"\"", returnStdout: true).trim()
@@ -89,7 +73,7 @@ pipeline {
                     def ci = bat(script: "git log ${lastTag}..HEAD --oneline --grep=\"^ci\\|^build\\|^pipeline\" 2>nul || echo \"\"", returnStdout: true).trim()
                     def others = bat(script: "git log ${lastTag}..HEAD --oneline 2>nul || echo \"\"", returnStdout: true).trim()
 
-                    writeFile file: "${RELEASE_NOTES_FILE}", text: """${changelog}
+                    def releaseBody = """## Changes
 
 ### Features
 ${features ?: "- No new features in this release."}
@@ -111,16 +95,22 @@ ${others ?: "- No other changes in this release."}
 
 ---
 
+**Docker Images:**
+- srcracles/circleguard-auth-service:stage
+- srcracles/circleguard-identity-service:stage
+- srcracles/circleguard-form-service:stage
+- srcracles/circleguard-promotion-service:stage
+- srcracles/circleguard-notification-service:stage
+- srcracles/circleguard-gateway-service:stage
+
 **Deployment Notes:**
 - Deployed to Kubernetes master namespace
 - All services use Docker image tag: `stage`
 - Verify deployment: `kubectl get pods -n master`
-
-**Verification Checklist:**
-- [ ] All pods running in master namespace
-- [ ] Services accessible via ClusterIP
-- [ ] Health endpoints responding
 """
+
+                    writeFile file: "${RELEASE_NOTES_FILE}", text: releaseBody
+                    env.RELEASE_BODY = releaseBody
                 }
                 archiveArtifacts artifacts: "${RELEASE_NOTES_FILE}", allowEmptyArchive: false
             }
@@ -131,11 +121,37 @@ ${others ?: "- No other changes in this release."}
                 bat "git push origin v%VERSION%"
             }
         }
+        stage('Publish GitHub Release') {
+            steps {
+                withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                    script {
+                        def jsonBody = """
+                        {
+                            "tag_name": "v${VERSION}",
+                            "name": "Release v${VERSION}",
+                            "body": "${env.RELEASE_BODY.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')}",
+                            "draft": false,
+                            "prerelease": false
+                        }
+                        """
+
+                        writeFile file: 'github-release-payload.json', text: jsonBody
+
+                        bat """
+                            curl -L -X POST "https://api.github.com/repos/%GITHUB_OWNER%/%GITHUB_REPO%/releases" ^
+                            -H "Accept: application/vnd.github+json" ^
+                            -H "Authorization: Bearer %GITHUB_TOKEN%" ^
+                            -H "X-GitHub-Api-Version: 2022-11-28" ^
+                            -d @github-release-payload.json
+                        """
+                    }
+                }
+            }
+        }
     }
     post {
         success {
-            echo "Release v${VERSION} deployed to master namespace from stage images"
-            echo "Release Notes: ${RELEASE_NOTES_FILE}"
+            echo "Release v${VERSION} deployed to master namespace and published to GitHub"
         }
         failure {
             echo "Master pipeline failed. Review logs and re-run."
