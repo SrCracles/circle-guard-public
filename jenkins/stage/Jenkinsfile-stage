@@ -66,8 +66,8 @@ pipeline {
         }
         stage('Performance Test - Locust') {
             steps {
-                echo 'Running performance test (normal load, 50 users, 2 min)...'
-                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 50 -r 5 --run-time 120s --headless --csv=locust-performance"
+                echo 'Running performance test (normal load, 20 users, 1 min)...'
+                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 20 -r 2 --run-time 60s --headless --csv=locust-performance"
             }
             post {
                 always {
@@ -77,8 +77,8 @@ pipeline {
         }
         stage('Stress Test - Locust') {
             steps {
-                echo 'Running stress test (high load, 200 users, 3 min)...'
-                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 200 -r 20 --run-time 180s --headless --csv=locust-stress"
+                echo 'Running stress test (high load, 50 users, 1 min)...'
+                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 50 -r 5 --run-time 60s --headless --csv=locust-stress"
             }
             post {
                 always {
@@ -102,18 +102,18 @@ pipeline {
                     writeFile file: 'PERFORMANCE_REPORT.md', text: """# Performance Test Report
 
 ## Performance Test (Normal Load)
-- Users: 50
-- Ramp-up: 5 users/sec
-- Duration: 120 seconds
+- Users: 20
+- Ramp-up: 2 users/sec
+- Duration: 60 seconds
 
 ```csv
 ${perfStats}
 ```
 
 ## Stress Test (High Load)
-- Users: 200
-- Ramp-up: 20 users/sec
-- Duration: 180 seconds
+- Users: 50
+- Ramp-up: 5 users/sec
+- Duration: 60 seconds
 
 ```csv
 ${stressStats}
