@@ -123,8 +123,10 @@ Todo el trabajo de pipelines, Kubernetes, pruebas y automatizacion se mantendra 
 
 ```
 circle-guard-public/
+├── setup-kind.ps1                     # Script para crear cluster Kind + namespaces + infra
 ├── docs/
-│   └── selectedServices.md              # Este documento
+│   ├── selectedServices.md            # Este documento
+│   └── pipeline-flow.md               # Flujo detallado de pipelines CI/CD
 ├── tests/
 │   ├── postman/
 │   │   ├── circle-guard-e2e-collection.json    # Coleccion de pruebas E2E para Newman
