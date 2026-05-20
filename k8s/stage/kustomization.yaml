@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: stage
+
+resources:
+  - ../base
+
+commonLabels:
+  environment: stage
+
+images:
+  - name: srcracles/circleguard-auth-service
+    newTag: stage
+  - name: srcracles/circleguard-identity-service
+    newTag: stage
+  - name: srcracles/circleguard-form-service
+    newTag: stage
+  - name: srcracles/circleguard-promotion-service
+    newTag: stage
+  - name: srcracles/circleguard-notification-service
+    newTag: stage
+  - name: srcracles/circleguard-gateway-service
+    newTag: stage

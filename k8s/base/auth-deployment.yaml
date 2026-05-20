@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: circleguard-auth-service
+  labels:
+    app: circleguard-auth-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: circleguard-auth-service
+  template:
+    metadata:
+      labels:
+        app: circleguard-auth-service
+    spec:
+      containers:
+        - name: circleguard-auth-service
+          image: srcracles/circleguard-auth-service:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8180
+          envFrom:
+            - configMapRef:
+                name: circleguard-config
+            - secretRef:
+                name: circleguard-secrets
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: "circleguard-auth-service"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

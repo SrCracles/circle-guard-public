@@ -131,9 +131,28 @@ circle-guard-public/
 │   │   └── circle-guard-environment.json       # Environment de Postman (variables)
 │   └── locustfile.py                    # Pruebas de rendimiento con Locust
 ├── k8s/
-│   ├── dev/                             # Manifiestos para dev environment
-│   ├── stage/                           # Manifiestos para stage environment
-│   └── master/                          # Manifiestos para master environment
+│   ├── base/                            # Manifiestos base (Deployments + Services + ConfigMap + Secret)
+│   │   ├── kustomization.yaml           # Recursos base de Kustomize
+│   │   ├── configmap.yaml               # Configuracion compartida (URLs de DB, Kafka, Redis, etc.)
+│   │   ├── secret.yaml                  # Credenciales (passwords, tokens)
+│   │   ├── auth-deployment.yaml         # Deployment de auth-service
+│   │   ├── auth-service.yaml            # Service de auth-service
+│   │   ├── identity-deployment.yaml     # Deployment de identity-service
+│   │   ├── identity-service.yaml        # Service de identity-service
+│   │   ├── form-deployment.yaml         # Deployment de form-service
+│   │   ├── form-service.yaml            # Service de form-service
+│   │   ├── promotion-deployment.yaml    # Deployment de promotion-service
+│   │   ├── promotion-service.yaml       # Service de promotion-service
+│   │   ├── notification-deployment.yaml # Deployment de notification-service
+│   │   ├── notification-service.yaml    # Service de notification-service
+│   │   ├── gateway-deployment.yaml      # Deployment de gateway-service
+│   │   └── gateway-service.yaml         # Service de gateway-service
+│   ├── dev/
+│   │   └── kustomization.yaml           # Overlay Kustomize para namespace dev
+│   ├── stage/
+│   │   └── kustomization.yaml           # Overlay Kustomize para namespace stage (tag :stage)
+│   └── master/
+│       └── kustomization.yaml           # Overlay Kustomize para namespace master (tag :stage)
 ├── jenkins/
 │   ├── dev/
 │   │   ├── Jenkinsfile-auth             # Pipeline dev para auth-service

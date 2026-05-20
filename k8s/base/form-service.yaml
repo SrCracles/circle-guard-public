@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: circleguard-form-service
+  labels:
+    app: circleguard-form-service
+spec:
+  selector:
+    app: circleguard-form-service
+  ports:
+    - port: 8086
+      targetPort: 8086
+      name: http
+  type: ClusterIP

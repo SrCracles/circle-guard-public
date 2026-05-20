@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: circleguard-promotion-service
+  labels:
+    app: circleguard-promotion-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: circleguard-promotion-service
+  template:
+    metadata:
+      labels:
+        app: circleguard-promotion-service
+    spec:
+      containers:
+        - name: circleguard-promotion-service
+          image: srcracles/circleguard-promotion-service:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8088
+          envFrom:
+            - configMapRef:
+                name: circleguard-config
+            - secretRef:
+                name: circleguard-secrets
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: "circleguard-promotion-service"
+            - name: SPRING_KAFKA_CONSUMER_GROUP_ID
+              value: "promotion-service-group"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
