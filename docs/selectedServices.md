@@ -112,10 +112,10 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 
 | Escenario | Que Valida | Por Que Es Importante |
 |-----------|------------|----------------------|
-| **Login masivo** (auth-service) | Tiempo de respuesta < 500ms bajo 100 usuarios concurrentes, throughput > 50 req/s, tasa de errores < 1% | En horarios pico (entrada de clases) cientos de usuarios intentan loguearse simultaneamente; latencia alta genera colas en las puertas |
-| **Envio concurrente de surveys** (form-service) | Latencia < 1s bajo 50 usuarios concurrentes, manejo de picos de 200 req/s sin perdida de datos | Durante una alerta de salud, todos los usuarios intentan reportar estado al mismo tiempo; el sistema no puede perder surveys |
-| **Procesamiento de Kafka** (promotion-service) | Throughput de mensajes > 100 msg/s, latencia end-to-end < 2s desde emision hasta consumo | Si Kafka se satura, los cambios de estado no se propagan y el rastreo de contactos queda desactualizado |
-| **Validacion de QR en puerta** (gateway-service) | Respuesta < 100ms, concurrencia de 200 escaneos/s sin degradacion | Los usuarios escanean QR al pasar por las puertas; mas de 100ms de latencia genera cuellos de botella fisicos |
+| **Performance Test** (carga normal) | 20 usuarios concurrentes durante 60 segundos. Latencia promedio < 500ms, tasa de errores < 5% | Valida comportamiento estable bajo carga representativa del dia a dia en un campus universitario |
+| **Stress Test** (carga alta) | 50 usuarios concurrentes durante 60 segundos. Detecta punto de degradacion sin saturar la PC local | Identifica el limite del sistema antes de que falle en produccion; valores conservadores por ser entorno local |
+
+> **Nota:** Las pruebas usan valores conservadores (20 y 50 usuarios, 1 minuto cada una) para no saturar la PC local donde corre el cluster de Kind y Jenkins.
 
 ## 5. Estructura de Carpetas del Proyecto
 
