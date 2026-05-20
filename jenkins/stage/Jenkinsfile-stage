@@ -64,14 +64,71 @@ pipeline {
                 }
             }
         }
-        stage('Performance Smoke Test - Locust') {
+        stage('Performance Test - Locust') {
             steps {
-                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 10 -r 2 --run-time 30s --headless --csv=locust-stage-smoke"
+                echo 'Running performance test (normal load, 50 users, 2 min)...'
+                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 50 -r 5 --run-time 120s --headless --csv=locust-performance"
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'locust-stage-smoke_*.csv', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'locust-performance_*.csv', allowEmptyArchive: true
                 }
+            }
+        }
+        stage('Stress Test - Locust') {
+            steps {
+                echo 'Running stress test (high load, 200 users, 3 min)...'
+                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 200 -r 20 --run-time 180s --headless --csv=locust-stress"
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'locust-stress_*.csv', allowEmptyArchive: true
+                }
+            }
+        }
+        stage('Generate Performance Report') {
+            steps {
+                script {
+                    def perfStats = ""
+                    def stressStats = ""
+                    
+                    if (fileExists('locust-performance_stats.csv')) {
+                        perfStats = readFile('locust-performance_stats.csv')
+                    }
+                    if (fileExists('locust-stress_stats.csv')) {
+                        stressStats = readFile('locust-stress_stats.csv')
+                    }
+                    
+                    writeFile file: 'PERFORMANCE_REPORT.md', text: """# Performance Test Report
+
+## Performance Test (Normal Load)
+- Users: 50
+- Ramp-up: 5 users/sec
+- Duration: 120 seconds
+
+```csv
+${perfStats}
+```
+
+## Stress Test (High Load)
+- Users: 200
+- Ramp-up: 20 users/sec
+- Duration: 180 seconds
+
+```csv
+${stressStats}
+```
+
+## Artifacts
+- locust-performance_stats.csv
+- locust-performance_failures.csv
+- locust-performance_exceptions.csv
+- locust-stress_stats.csv
+- locust-stress_failures.csv
+- locust-stress_exceptions.csv
+"""
+                }
+                archiveArtifacts artifacts: 'PERFORMANCE_REPORT.md', allowEmptyArchive: true
             }
         }
         stage('Promote dev to stage tag') {

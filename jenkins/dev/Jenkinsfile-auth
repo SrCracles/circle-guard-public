@@ -39,12 +39,6 @@ pipeline {
                 }
             }
         }
-        stage('Deploy to Kind Dev') {
-            steps {
-                bat "kubectl set image deployment/%SERVICE_NAME% %SERVICE_NAME%=%DOCKER_IMAGE%:dev -n dev"
-                bat "kubectl rollout status deployment/%SERVICE_NAME% -n dev --timeout=120s"
-            }
-        }
     }
     post {
         failure {
