@@ -47,11 +47,7 @@
               "mode": "raw",
               "raw": "{\"username\": \"staff_guard\", \"password\": \"password\"}"
             },
-            "url": {
-              "raw": "{{auth_base_url}}/api/v1/auth/login",
-              "host": ["{{auth_base_url}}"],
-              "path": ["api", "v1", "auth", "login"]
-            }
+            "url": "{{auth_base_url}}/api/v1/auth/login"
           }
         },
         {
@@ -86,11 +82,7 @@
                 "value": "Bearer {{jwt_token}}"
               }
             ],
-            "url": {
-              "raw": "{{auth_base_url}}/api/v1/auth/qr/generate",
-              "host": ["{{auth_base_url}}"],
-              "path": ["api", "v1", "auth", "qr", "generate"]
-            }
+            "url": "{{auth_base_url}}/api/v1/auth/qr/generate"
           }
         },
         {
@@ -125,11 +117,7 @@
               "mode": "raw",
               "raw": "{\"username\": \"invalid_user\", \"password\": \"wrongpass\"}"
             },
-            "url": {
-              "raw": "{{auth_base_url}}/api/v1/auth/login",
-              "host": ["{{auth_base_url}}"],
-              "path": ["api", "v1", "auth", "login"]
-            }
+            "url": "{{auth_base_url}}/api/v1/auth/login"
           }
         }
       ]
@@ -172,11 +160,7 @@
               "mode": "raw",
               "raw": "{\"anonymousId\": \"{{anonymous_id}}\", \"hasFever\": true, \"hasCough\": true, \"otherSymptoms\": \"Headache, fatigue\", \"responses\": {\"q1\": \"YES\", \"q2\": \"YES\"}}"
             },
-            "url": {
-              "raw": "{{form_base_url}}/api/v1/surveys",
-              "host": ["{{form_base_url}}"],
-              "path": ["api", "v1", "surveys"]
-            }
+            "url": "{{form_base_url}}/api/v1/surveys"
           }
         },
         {
@@ -212,11 +196,7 @@
               "mode": "raw",
               "raw": "{\"anonymousId\": \"{{anonymous_id}}\", \"hasFever\": false, \"hasCough\": false, \"responses\": {\"q1\": \"NO\", \"q2\": \"NO\"}}"
             },
-            "url": {
-              "raw": "{{form_base_url}}/api/v1/surveys",
-              "host": ["{{form_base_url}}"],
-              "path": ["api", "v1", "surveys"]
-            }
+            "url": "{{form_base_url}}/api/v1/surveys"
           }
         }
       ]
@@ -258,11 +238,7 @@
               "mode": "raw",
               "raw": "{\"token\": \"{{qr_token}}\"}"
             },
-            "url": {
-              "raw": "{{gateway_base_url}}/api/v1/gate/validate",
-              "host": ["{{gateway_base_url}}"],
-              "path": ["api", "v1", "gate", "validate"]
-            }
+            "url": "{{gateway_base_url}}/api/v1/gate/validate"
           }
         },
         {
@@ -299,11 +275,7 @@
               "mode": "raw",
               "raw": "{\"token\": \"invalid.token.here\"}"
             },
-            "url": {
-              "raw": "{{gateway_base_url}}/api/v1/gate/validate",
-              "host": ["{{gateway_base_url}}"],
-              "path": ["api", "v1", "gate", "validate"]
-            }
+            "url": "{{gateway_base_url}}/api/v1/gate/validate"
           }
         }
       ]
@@ -342,11 +314,7 @@
               "mode": "raw",
               "raw": "{\"username\": \"health_user\", \"password\": \"password\"}"
             },
-            "url": {
-              "raw": "{{auth_base_url}}/api/v1/auth/login",
-              "host": ["{{auth_base_url}}"],
-              "path": ["api", "v1", "auth", "login"]
-            }
+            "url": "{{auth_base_url}}/api/v1/auth/login"
           }
         },
         {
@@ -380,11 +348,7 @@
               "mode": "raw",
               "raw": "{\"anonymousId\": \"{{anonymous_id}}\"}"
             },
-            "url": {
-              "raw": "{{promotion_base_url}}/api/v1/health/confirmed",
-              "host": ["{{promotion_base_url}}"],
-              "path": ["api", "v1", "health", "confirmed"]
-            }
+            "url": "{{promotion_base_url}}/api/v1/health/confirmed"
           }
         }
       ]
