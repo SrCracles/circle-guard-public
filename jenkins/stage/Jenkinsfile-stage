@@ -58,6 +58,8 @@ pipeline {
         }
         stage('E2E Tests - Newman') {
             steps {
+                // Instalar Newman si no está disponible
+                bat 'npm install -g newman || npm install newman'
                 bat "newman run %NEWMAN_COLLECTION% -e %NEWMAN_ENVIRONMENT% --delay-request 500 --reporters cli,junit,html --reporter-junit-export newman-report.xml --reporter-html-export newman-report.html"
             }
             post {
