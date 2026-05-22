@@ -2,11 +2,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - postgresql.yaml
-  - kafka.yaml
+  - zookeeper.yaml
   - redis.yaml
   - neo4j.yaml
   - openldap.yaml
+  - postgresql.yaml
+  - kafka.yaml
 
 commonLabels:
   component: infrastructure

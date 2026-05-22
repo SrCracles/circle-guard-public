@@ -1,23 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ldap
+  name: openldap          # <-- nombre diferente al Service evita colisión
   labels:
-    app: ldap
+    app: openldap
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ldap
+      app: openldap
   template:
     metadata:
       labels:
-        app: ldap
+        app: openldap
     spec:
-      hostname: ldap
-      subdomain: ldap
       containers:
-        - name: ldap
+        - name: openldap
           image: osixia/openldap:1.5.0
           ports:
             - containerPort: 389
@@ -29,29 +27,21 @@ spec:
               value: "circleguard.edu"
             - name: LDAP_ADMIN_PASSWORD
               value: "admin"
-            - name: LDAP_BASE_DN
-              value: "dc=circleguard,dc=edu"
-            - name: LDAP_TLS
-              value: "false"
-            - name: HOSTNAME
-              value: "ldap"
-            - name: LDAP_HOSTNAME
-              value: "ldap.infra.svc.cluster.local"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: ldap
+  name: openldap
   labels:
-    app: ldap
+    app: openldap
 spec:
   selector:
-    app: ldap
+    app: openldap
   ports:
-    - port: 389
+    - name: ldap
+      port: 389
       targetPort: 389
-      name: ldap
-    - port: 636
+    - name: ldaps
+      port: 636
       targetPort: 636
-      name: ldaps
   type: ClusterIP
