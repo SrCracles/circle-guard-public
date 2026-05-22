@@ -1,10 +1,14 @@
 from locust import HttpUser, task, between
 import uuid
+import os
+
+FORM_SERVICE_URL = os.environ.get("FORM_SERVICE_URL", "http://circleguard-form-service:8086")
+GATEWAY_SERVICE_URL = os.environ.get("GATEWAY_SERVICE_URL", "http://circleguard-gateway-service:8087")
 
 class CircleGuardUser(HttpUser):
     """
     Locust load tests for CircleGuard microservices.
-    Run with: locust -f tests/locustfile.py --host http://localhost:8180
+    Run with: locust -f tests/locustfile.py --host http://circleguard-auth-service:8180
     """
     wait_time = between(1, 3)
 
@@ -46,7 +50,7 @@ class CircleGuardUser(HttpUser):
     def submit_survey(self):
         """Simulate health survey submission (lower frequency)."""
         self.client.post(
-            "http://localhost:8086/api/v1/surveys",
+            f"{FORM_SERVICE_URL}/api/v1/surveys",
             json={
                 "anonymousId": self.anonymous_id,
                 "hasFever": False,
@@ -61,7 +65,7 @@ class CircleGuardUser(HttpUser):
     def validate_qr(self):
         """Simulate QR validation at campus gate."""
         self.client.post(
-            "http://localhost:8087/api/v1/gate/validate",
+            f"{GATEWAY_SERVICE_URL}/api/v1/gate/validate",
             json={"token": "dummy-token-for-load-test"},
             headers={"Content-Type": "application/json"}
         )
