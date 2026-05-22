@@ -46,3 +46,9 @@ data:
 
   # Auth API URL for notification service
   AUTH_API_URL: "http://circleguard-auth-service:8180"
+
+  # Identity service URL for auth service
+  IDENTITY_SERVICE_URL: "http://circleguard-identity-service:8083"
+
+  # Kafka JSON deserializer trusted packages
+  SPRING_KAFKA_CONSUMER_PROPERTIES_SPRING_JSON_TRUSTED_PACKAGES: "*"
