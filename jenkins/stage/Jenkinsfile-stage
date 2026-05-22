@@ -58,9 +58,8 @@ pipeline {
         }
         stage('E2E Tests - Newman') {
             steps {
-                // Instalar Newman si no está disponible
-                bat 'npm install -g newman || npm install newman'
-                bat "newman run %NEWMAN_COLLECTION% -e %NEWMAN_ENVIRONMENT% --delay-request 500 --reporters cli,junit,html --reporter-junit-export newman-report.xml --reporter-html-export newman-report.html"
+                bat 'npm install newman newman-reporter-html'
+                bat 'npx newman run %NEWMAN_COLLECTION% -e %NEWMAN_ENVIRONMENT% --delay-request 500 --reporters cli,junit,html --reporter-junit-export newman-report.xml --reporter-html-export newman-report.html'
             }
             post {
                 always {
@@ -71,6 +70,7 @@ pipeline {
         }
         stage('Performance Test - Locust') {
             steps {
+                bat 'pip install locust'
                 echo 'Running performance test (normal load, 20 users, 1 min)...'
                 bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 20 -r 2 --run-time 60s --headless --csv=locust-performance"
             }
@@ -82,6 +82,7 @@ pipeline {
         }
         stage('Stress Test - Locust') {
             steps {
+                bat 'pip install locust'
                 echo 'Running stress test (high load, 50 users, 1 min)...'
                 bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 50 -r 5 --run-time 60s --headless --csv=locust-stress"
             }
