@@ -181,8 +181,12 @@ ${stressStats}
         }
     }
     post {
-    /* always {
-            echo 'Tearing down stage resources and cleaning local images...'
+        failure {
+            echo 'Stage pipeline failed. Resources left running for debugging.'
+            echo 'Run manually to clean up: kubectl delete deployment,service,configmap,secret --all -n stage'
+        }
+        success {
+            echo 'Stage pipeline succeeded. Cleaning up stage resources and local images...'
             bat 'kubectl delete deployment --all -n stage --ignore-not-found=true'
             bat 'kubectl delete service --all -n stage --ignore-not-found=true'
             bat 'kubectl delete configmap --all -n stage --ignore-not-found=true'
@@ -202,12 +206,6 @@ ${stressStats}
                     bat "docker rmi ${DOCKER_USER}/${svc}:stage 2>nul || exit 0"
                 }
             }
-        } */
-        failure {
-            echo 'Stage pipeline failed. Images were NOT promoted to stage tag.'
-        }
-        success {
-            echo 'Stage pipeline succeeded. All images promoted from dev to stage tag.'
         }
     }
 }
