@@ -5,6 +5,7 @@ namespace: dev
 
 resources:
   - ../base
+  - ../infra
 
 commonLabels:
   environment: dev

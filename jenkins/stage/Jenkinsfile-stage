@@ -171,6 +171,23 @@ ${stressStats}
                 }
             }
         }
+        stage('Cleanup Local Images') {
+            steps {
+                script {
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service'
+                    ]
+                    for (svc in services) {
+                        bat "docker rmi ${DOCKER_USER}/${svc}:dev ${DOCKER_USER}/${svc}:stage || exit 0"
+                    }
+                }
+            }
+        }
     }
     post {
         always {

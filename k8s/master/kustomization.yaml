@@ -5,6 +5,7 @@ namespace: master
 
 resources:
   - ../base
+  - ../infra
 
 commonLabels:
   environment: master

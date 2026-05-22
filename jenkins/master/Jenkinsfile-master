@@ -41,7 +41,7 @@ pipeline {
         stage('Deploy to Kind Master') {
             steps {
                 echo 'Deploying full architecture to master namespace...'
-                bat 'kubectl apply -f k8s/master/ -n master'
+                bat 'kubectl apply -k k8s/master/'
                 script {
                     def services = [
                         'circleguard-auth-service',

@@ -5,6 +5,7 @@ namespace: stage
 
 resources:
   - ../base
+  - ../infra
 
 commonLabels:
   environment: stage

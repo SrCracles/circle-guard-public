@@ -41,11 +41,12 @@ pipeline {
         }
     }
     post {
-        failure {
-            echo "Pipeline failed for ${SERVICE_NAME}"
-        }
         success {
             echo "Pipeline succeeded for ${SERVICE_NAME}"
+            bat "docker rmi %DOCKER_IMAGE%:dev || exit 0"
+        }
+        failure {
+            echo "Pipeline failed for ${SERVICE_NAME}"
         }
     }
 }
