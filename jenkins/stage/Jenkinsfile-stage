@@ -60,7 +60,16 @@ pipeline {
             steps {
                 bat 'if exist node_modules rmdir /s /q node_modules'
                 bat 'npm install newman newman-reporter-html'
-                bat '.\\node_modules\\.bin\\newman run %NEWMAN_COLLECTION% -e %NEWMAN_ENVIRONMENT% --delay-request 500 --reporters cli,junit,html --reporter-junit-export newman-report.xml --reporter-html-export newman-report.html --verbose'
+                bat '''.\\node_modules\\.bin\\newman run %NEWMAN_COLLECTION% ^
+  --env-var "auth_base_url=http://localhost:8180" ^
+  --env-var "form_base_url=http://localhost:8086" ^
+  --env-var "gateway_base_url=http://localhost:8087" ^
+  --env-var "promotion_base_url=http://localhost:8088" ^
+  --delay-request 500 ^
+  --reporters cli,junit,html ^
+  --reporter-junit-export newman-report.xml ^
+  --reporter-html-export newman-report.html ^
+  --verbose'''
             }
             post {
                 always {
