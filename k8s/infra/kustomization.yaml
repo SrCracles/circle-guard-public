@@ -3,7 +3,6 @@ kind: Kustomization
 
 resources:
   - postgresql.yaml
-  - zookeeper.yaml
   - kafka.yaml
   - redis.yaml
   - neo4j.yaml

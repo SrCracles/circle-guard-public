@@ -26,13 +26,6 @@ spec:
               value: "password"
             - name: POSTGRES_MULTIPLE_DATABASES
               value: "circleguard_auth,circleguard_identity,circleguard_form,circleguard_promotion"
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "250m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
           volumeMounts:
             - name: postgresql-data
               mountPath: /var/lib/postgresql/data
