@@ -5,54 +5,63 @@
     {
       "key": "auth_base_url",
       "value": "http://localhost:8180",
+      "currentValue": "http://localhost:8180",
       "type": "default",
       "enabled": true
     },
     {
       "key": "form_base_url",
       "value": "http://localhost:8086",
+      "currentValue": "http://localhost:8086",
       "type": "default",
       "enabled": true
     },
     {
       "key": "gateway_base_url",
       "value": "http://localhost:8087",
+      "currentValue": "http://localhost:8087",
       "type": "default",
       "enabled": true
     },
     {
       "key": "promotion_base_url",
       "value": "http://localhost:8088",
+      "currentValue": "http://localhost:8088",
       "type": "default",
       "enabled": true
     },
     {
       "key": "jwt_token",
       "value": "",
+      "currentValue": "",
       "type": "secret",
       "enabled": true
     },
     {
       "key": "admin_jwt_token",
       "value": "",
+      "currentValue": "",
       "type": "secret",
       "enabled": true
     },
     {
       "key": "qr_token",
       "value": "",
+      "currentValue": "",
       "type": "default",
       "enabled": true
     },
     {
       "key": "anonymous_id",
       "value": "",
+      "currentValue": "",
       "type": "default",
       "enabled": true
     },
     {
       "key": "admin_anonymous_id",
       "value": "",
+      "currentValue": "",
       "type": "default",
       "enabled": true
     }
