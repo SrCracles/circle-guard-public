@@ -18,7 +18,7 @@ pipeline {
             }
             post {
                 always {
-                    junit "services/%SERVICE_NAME%/build/test-results/test/*.xml"
+                    junit testResults: "**/build/test-results/test/*.xml", allowEmptyResults: true
                 }
             }
         }
