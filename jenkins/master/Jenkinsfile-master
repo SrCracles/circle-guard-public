@@ -61,21 +61,29 @@ pipeline {
         stage('Generate Release Notes') {
             steps {
                 script {
+                    def runBatOutput = { command ->
+                        bat(script: "@echo off\r\n${command}", returnStdout: true).trim()
+                    }
+
+                    def runBatStatus = { command ->
+                        bat(script: "@echo off\r\n${command}", returnStatus: true)
+                    }
+
                     def lastTag = ""
-                    def hasPreviousTag = bat(script: 'git describe --tags --abbrev=0 >nul 2>nul', returnStatus: true) == 0
+                    def hasPreviousTag = runBatStatus('git describe --tags --abbrev=0 >nul 2>nul') == 0
                     if (hasPreviousTag) {
-                        lastTag = bat(script: 'git describe --tags --abbrev=0', returnStdout: true).trim()
+                        lastTag = runBatOutput('git describe --tags --abbrev=0')
                     }
 
                     def releaseRange = lastTag ? "${lastTag}..HEAD" : ""
                     def releaseRangePrefix = releaseRange ? "${releaseRange} " : ""
 
-                    def features = bat(script: "git log ${releaseRangePrefix}--oneline --grep=\"^feat\\|^feature\" 2>nul || echo \"\"", returnStdout: true).trim()
-                    def fixes = bat(script: "git log ${releaseRangePrefix}--oneline --grep=\"^fix\\|^bugfix\" 2>nul || echo \"\"", returnStdout: true).trim()
-                    def docs = bat(script: "git log ${releaseRangePrefix}--oneline --grep=\"^docs\\|^doc\" 2>nul || echo \"\"", returnStdout: true).trim()
-                    def tests = bat(script: "git log ${releaseRangePrefix}--oneline --grep=\"^test\\|^tests\" 2>nul || echo \"\"", returnStdout: true).trim()
-                    def ci = bat(script: "git log ${releaseRangePrefix}--oneline --grep=\"^ci\\|^build\\|^pipeline\" 2>nul || echo \"\"", returnStdout: true).trim()
-                    def others = bat(script: "git log ${releaseRangePrefix}--oneline 2>nul || echo \"\"", returnStdout: true).trim()
+                    def features = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^feat\\|^feature\" 2>nul || echo \"\"")
+                    def fixes = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^fix\\|^bugfix\" 2>nul || echo \"\"")
+                    def docs = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^docs\\|^doc\" 2>nul || echo \"\"")
+                    def tests = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^test\\|^tests\" 2>nul || echo \"\"")
+                    def ci = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^ci\\|^build\\|^pipeline\" 2>nul || echo \"\"")
+                    def others = runBatOutput("git log ${releaseRangePrefix}--oneline 2>nul || echo \"\"")
 
                     def releaseBody = """## Changes
 
