@@ -26,8 +26,6 @@ pipeline {
                     for (svc in services) {
                         bat "docker pull ${DOCKER_USER}/${svc}:dev"
                     }
-                    def images = services.collect { "${DOCKER_USER}/${it}:dev" }.join(' ')
-                    bat "kind load docker-image ${images} --name circleguard-cluster"
                 }
             }
         }

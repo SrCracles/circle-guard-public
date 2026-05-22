@@ -17,7 +17,7 @@ spec:
       containers:
         - name: circleguard-notification-service
           image: srcracles/circleguard-notification-service:dev
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 8082
           envFrom:
