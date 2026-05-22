@@ -64,15 +64,13 @@ pipeline {
                 bat 'ping 127.0.0.1 -n 6 > nul'
                 bat 'kubectl cp "%NEWMAN_COLLECTION%" newman-e2e:/tmp/collection.json -n stage -c newman-e2e'
                 bat 'kubectl cp "%NEWMAN_ENVIRONMENT%" newman-e2e:/tmp/environment.json -n stage -c newman-e2e'
-                bat 'kubectl exec newman-e2e -n stage -c newman-e2e -- newman run /tmp/collection.json -e /tmp/environment.json --delay-request 500 --reporters cli,junit,html --reporter-junit-export /tmp/newman-report.xml --reporter-html-export /tmp/newman-report.html'
-                bat 'kubectl cp newman-e2e:/tmp/newman-report.xml newman-report.xml -n stage -c newman-e2e || echo "No XML report"'
-                bat 'kubectl cp newman-e2e:/tmp/newman-report.html newman-report.html -n stage -c newman-e2e || echo "No HTML report"'
+                bat 'kubectl exec newman-e2e -n stage -c newman-e2e -- newman run /tmp/collection.json -e /tmp/environment.json --delay-request 500 --reporters cli,junit --reporter-junit-export /tmp/newman-report.xml'
+                bat 'kubectl cp newman-e2e:/tmp/newman-report.xml newman-report.xml -n stage -c newman-e2e'
                 bat 'kubectl delete pod newman-e2e -n stage --ignore-not-found=true'
             }
             post {
                 always {
                     junit testResults: 'newman-report.xml', allowEmptyResults: true
-                    publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'newman-report.html', reportName: 'Newman E2E Report'])
                 }
             }
         }
