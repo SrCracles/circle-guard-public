@@ -17,7 +17,7 @@ spec:
       containers:
         - name: circleguard-form-service
           image: srcracles/circleguard-form-service:dev
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8086
           envFrom:
@@ -28,3 +28,5 @@ spec:
           env:
             - name: SPRING_APPLICATION_NAME
               value: "circleguard-form-service"
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard_form"
