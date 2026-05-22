@@ -58,14 +58,14 @@ pipeline {
         stage('E2E Tests - Newman') {
             steps {
                 echo 'Running Newman E2E tests inside Kubernetes cluster...'
-                bat 'kubectl run newman-e2e --restart=Never --image=postman/newman:latest -n stage -- sleep 3600'
+                bat 'kubectl run newman-e2e --restart=Never --image=postman/newman:latest -n stage --command -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/newman-e2e -n stage --timeout=60s'
-                bat 'ping 127.0.0.1 -n 4 > nul'
-                bat 'type %NEWMAN_COLLECTION% | kubectl exec -i newman-e2e -n stage -- sh -c "cat > /tmp/collection.json"'
-                bat 'type %NEWMAN_ENVIRONMENT% | kubectl exec -i newman-e2e -n stage -- sh -c "cat > /tmp/environment.json"'
-                bat 'kubectl exec newman-e2e -n stage -- newman run /tmp/collection.json -e /tmp/environment.json --delay-request 500 --reporters cli,junit,html --reporter-junit-export /tmp/newman-report.xml --reporter-html-export /tmp/newman-report.html'
-                bat 'kubectl exec newman-e2e -n stage -- cat /tmp/newman-report.xml > newman-report.xml || echo "No XML report"'
-                bat 'kubectl exec newman-e2e -n stage -- cat /tmp/newman-report.html > newman-report.html || echo "No HTML report"'
+                bat 'ping 127.0.0.1 -n 6 > nul'
+                bat 'kubectl cp "%NEWMAN_COLLECTION%" newman-e2e:/tmp/collection.json -n stage -c newman-e2e'
+                bat 'kubectl cp "%NEWMAN_ENVIRONMENT%" newman-e2e:/tmp/environment.json -n stage -c newman-e2e'
+                bat 'kubectl exec newman-e2e -n stage -c newman-e2e -- newman run /tmp/collection.json -e /tmp/environment.json --delay-request 500 --reporters cli,junit,html --reporter-junit-export /tmp/newman-report.xml --reporter-html-export /tmp/newman-report.html'
+                bat 'kubectl cp newman-e2e:/tmp/newman-report.xml newman-report.xml -n stage -c newman-e2e || echo "No XML report"'
+                bat 'kubectl cp newman-e2e:/tmp/newman-report.html newman-report.html -n stage -c newman-e2e || echo "No HTML report"'
                 bat 'kubectl delete pod newman-e2e -n stage --ignore-not-found=true'
             }
             post {
@@ -78,14 +78,14 @@ pipeline {
         stage('Performance Test - Locust') {
             steps {
                 echo 'Running Locust performance test inside Kubernetes cluster...'
-                bat 'kubectl run locust-perf --restart=Never --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
+                bat 'kubectl run locust-perf --restart=Never --image=locustio/locust:2.29.0 -n stage --command -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/locust-perf -n stage --timeout=60s'
-                bat 'ping 127.0.0.1 -n 4 > nul'
-                bat 'type %LOCUST_FILE% | kubectl exec -i locust-perf -n stage -- sh -c "cat > /tmp/locustfile.py"'
-                bat 'kubectl exec locust-perf -n stage -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 20 -r 2 --run-time 60s --headless --csv=/tmp/locust-performance'
-                bat 'kubectl exec locust-perf -n stage -- cat /tmp/locust-performance_stats.csv > locust-performance_stats.csv || echo "No perf stats"'
-                bat 'kubectl exec locust-perf -n stage -- cat /tmp/locust-performance_failures.csv > locust-performance_failures.csv || echo "No perf failures"'
-                bat 'kubectl exec locust-perf -n stage -- cat /tmp/locust-performance_exceptions.csv > locust-performance_exceptions.csv || echo "No perf exceptions"'
+                bat 'ping 127.0.0.1 -n 6 > nul'
+                bat 'kubectl cp "%LOCUST_FILE%" locust-perf:/tmp/locustfile.py -n stage -c locust-perf'
+                bat 'kubectl exec locust-perf -n stage -c locust-perf -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 20 -r 2 --run-time 60s --headless --csv=/tmp/locust-performance'
+                bat 'kubectl cp locust-perf:/tmp/locust-performance_stats.csv locust-performance_stats.csv -n stage -c locust-perf || echo "No perf stats"'
+                bat 'kubectl cp locust-perf:/tmp/locust-performance_failures.csv locust-performance_failures.csv -n stage -c locust-perf || echo "No perf failures"'
+                bat 'kubectl cp locust-perf:/tmp/locust-performance_exceptions.csv locust-performance_exceptions.csv -n stage -c locust-perf || echo "No perf exceptions"'
                 bat 'kubectl delete pod locust-perf -n stage --ignore-not-found=true'
             }
             post {
@@ -97,14 +97,14 @@ pipeline {
         stage('Stress Test - Locust') {
             steps {
                 echo 'Running Locust stress test inside Kubernetes cluster...'
-                bat 'kubectl run locust-stress --restart=Never --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
+                bat 'kubectl run locust-stress --restart=Never --image=locustio/locust:2.29.0 -n stage --command -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/locust-stress -n stage --timeout=60s'
-                bat 'ping 127.0.0.1 -n 4 > nul'
-                bat 'type %LOCUST_FILE% | kubectl exec -i locust-stress -n stage -- sh -c "cat > /tmp/locustfile.py"'
-                bat 'kubectl exec locust-stress -n stage -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 50 -r 5 --run-time 60s --headless --csv=/tmp/locust-stress'
-                bat 'kubectl exec locust-stress -n stage -- cat /tmp/locust-stress_stats.csv > locust-stress_stats.csv || echo "No stress stats"'
-                bat 'kubectl exec locust-stress -n stage -- cat /tmp/locust-stress_failures.csv > locust-stress_failures.csv || echo "No stress failures"'
-                bat 'kubectl exec locust-stress -n stage -- cat /tmp/locust-stress_exceptions.csv > locust-stress_exceptions.csv || echo "No stress exceptions"'
+                bat 'ping 127.0.0.1 -n 6 > nul'
+                bat 'kubectl cp "%LOCUST_FILE%" locust-stress:/tmp/locustfile.py -n stage -c locust-stress'
+                bat 'kubectl exec locust-stress -n stage -c locust-stress -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 50 -r 5 --run-time 60s --headless --csv=/tmp/locust-stress'
+                bat 'kubectl cp locust-stress:/tmp/locust-stress_stats.csv locust-stress_stats.csv -n stage -c locust-stress || echo "No stress stats"'
+                bat 'kubectl cp locust-stress:/tmp/locust-stress_failures.csv locust-stress_failures.csv -n stage -c locust-stress || echo "No stress failures"'
+                bat 'kubectl cp locust-stress:/tmp/locust-stress_exceptions.csv locust-stress_exceptions.csv -n stage -c locust-stress || echo "No stress exceptions"'
                 bat 'kubectl delete pod locust-stress -n stage --ignore-not-found=true'
             }
             post {
