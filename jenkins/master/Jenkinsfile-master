@@ -121,8 +121,12 @@ ${others ?: "- No other changes in this release."}
         }
         stage('Git Tag Release') {
             steps {
-                bat "git tag -a v%VERSION% -m \"Release v%VERSION%\""
-                bat "git push origin v%VERSION%"
+                withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                    bat 'git config user.name "Jenkins CI"'
+                    bat 'git config user.email "jenkins@users.noreply.github.com"'
+                    bat "git tag -a v%VERSION% -m \"Release v%VERSION%\""
+                    bat "git push https://x-access-token:%GITHUB_TOKEN%@github.com/%GITHUB_OWNER%/%GITHUB_REPO%.git refs/tags/v%VERSION%"
+                }
             }
         }
         stage('Publish GitHub Release') {
