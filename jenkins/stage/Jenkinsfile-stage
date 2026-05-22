@@ -31,6 +31,9 @@ pipeline {
         }
         stage('Deploy to Stage Environment') {
             steps {
+                echo 'Ensuring stage namespace and base manifests exist...'
+                bat 'kubectl create namespace stage --dry-run=client -o yaml | kubectl apply -f -'
+                bat 'kubectl apply -k k8s/stage/'
                 echo 'Deploying services to Kind stage namespace...'
                 script {
                     def services = [
