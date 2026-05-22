@@ -30,11 +30,10 @@ Los pipelines son:
 Paso a paso, todos siguen una lógica similar:
 
 1. Hacen checkout del código.
-2. Ejecutan primero las pruebas unitarias del servicio.
-3. Ejecutan después las pruebas de integración, levantando dependencias reales con Testcontainers en lugar de mocks.
-4. Construyen la imagen Docker del microservicio.
-5. Publican la imagen en DockerHub con tag `dev`.
-6. Dejan el artefacto listo para que el pipeline de stage lo consuma.
+2. Ejecuta las pruebas unitarias y de integración del servicio.
+3. Construyen la imagen Docker del microservicio.
+4. Publican la imagen en DockerHub con tag `dev`.
+5. Dejan el artefacto listo para que el pipeline de stage lo consuma.
 
 La utilidad de separarlos por servicio es que cada uno puede fallar de forma independiente sin bloquear a los demás y sin mezclar la responsabilidad de prueba de cada microservicio.
 
@@ -180,7 +179,7 @@ Estas pruebas se enfocan en piezas sensibles del dominio, donde un fallo tendrí
 
 ## 8. Pruebas De Integracion Nuevas
 
-Las 5 pruebas de integración nuevas cubren comunicación entre servicios y dependencias externas:
+Las 5 pruebas de integración nuevas son:
 
 | Test                               | Servicios Involucrados             | Que Valida                                                                                                                                                                         | Por Que Es Importante                                                                                                                                                                     |
 | ------------------ | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

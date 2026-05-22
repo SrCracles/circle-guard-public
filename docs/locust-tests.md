@@ -38,7 +38,7 @@ Cada usuario virtual se autentica al inicio y luego ejecuta acciones con distint
 
 - **Objetivo:** Encontrar punto de ruptura, cuellos de botella extremos y comportamiento bajo presion
 - **Mide:** Cuando degrada el rendimiento, cuando falla, como se recupera
-- **Usuarios:** 30 (1.5x del performance test)
+- **Usuarios:** 50
 - **Ramp-up:** 3 usuarios/segundo
 - **Duracion:** 60 segundos
 - **Wait time:** 0.5-2 segundos entre acciones (mas agresivo)
@@ -73,7 +73,7 @@ Locust genera archivos CSV con prefijo indicado por `--csv=`:
 locust -f tests/locustfile-performance.py --host http://localhost:8180 -u 20 -r 2 --run-time 60s --headless
 
 # Stress test
-locust -f tests/locustfile-stress.py --host http://localhost:8180 -u 30 -r 3 --run-time 60s --headless
+locust -f tests/locustfile-stress.py --host http://localhost:8180 -u 50 -r 3 --run-time 60s --headless
 ```
 
 ## Ejecucion en Kubernetes (pipeline)

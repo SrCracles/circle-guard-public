@@ -113,7 +113,7 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 | Escenario | Que Valida | Por Que Es Importante |
 |-----------|------------|----------------------|
 | **Performance Test** (carga normal) | 20 usuarios concurrentes durante 60 segundos. Latencia promedio < 500ms, tasa de errores < 5% | Valida comportamiento estable bajo carga representativa del dia a dia en un campus universitario |
-| **Stress Test** (carga alta) | 50 usuarios concurrentes durante 60 segundos. Detecta punto de degradacion sin saturar la PC local | Identifica el limite del sistema antes de que falle en produccion; valores conservadores por ser entorno local |
+| **Stress Test** (carga alta) | 50 usuarios concurrentes durante 60 segundos.| Identifica el limite del sistema antes de que falle en produccion; valores conservadores por ser entorno local |
 
 > **Nota:** Las pruebas usan valores conservadores (20 y 50 usuarios, 1 minuto cada una) para no saturar la PC local donde corre el cluster de Kind y Jenkins.
 

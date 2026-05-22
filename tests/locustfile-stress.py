@@ -14,7 +14,7 @@ class StressUser(HttpUser):
     extreme bottlenecks, and recovery behavior.
 
     Recommended CLI args:
-      --users 30 --spawn-rate 3 --run-time 60s
+      --users 50 --spawn-rate 3 --run-time 60s
     """
     wait_time = between(0.5, 2)
 
