@@ -49,40 +49,38 @@ pipeline {
                     }
                 }
                 bat 'kubectl rollout status deployment -n stage --timeout=300s'
-                bat 'start /B kubectl port-forward svc/circleguard-auth-service 8180:8180 -n stage'
-                bat 'start /B kubectl port-forward svc/circleguard-form-service 8086:8086 -n stage'
-                bat 'start /B kubectl port-forward svc/circleguard-gateway-service 8087:8087 -n stage'
-                bat 'start /B kubectl port-forward svc/circleguard-promotion-service 8088:8088 -n stage'
-                bat 'ping 127.0.0.1 -n 6 > nul'
             }
         }
         stage('E2E Tests - Newman') {
             steps {
-                bat 'if exist node_modules rmdir /s /q node_modules'
-                bat 'npm install newman newman-reporter-html'
-                bat '''.\\node_modules\\.bin\\newman run %NEWMAN_COLLECTION% ^
-  --env-var "auth_base_url=http://localhost:8180" ^
-  --env-var "form_base_url=http://localhost:8086" ^
-  --env-var "gateway_base_url=http://localhost:8087" ^
-  --env-var "promotion_base_url=http://localhost:8088" ^
-  --delay-request 500 ^
-  --reporters cli,junit,html ^
-  --reporter-junit-export newman-report.xml ^
-  --reporter-html-export newman-report.html ^
-  --verbose'''
+                echo 'Running Newman E2E tests inside Kubernetes cluster...'
+                bat 'kubectl run newman-e2e --image=postman/newman:latest -n stage -- sleep 3600'
+                bat 'kubectl wait --for=condition=ready pod/newman-e2e -n stage --timeout=60s'
+                bat 'kubectl cp %NEWMAN_COLLECTION% stage/newman-e2e:/tmp/collection.json'
+                bat 'kubectl cp %NEWMAN_ENVIRONMENT% stage/newman-e2e:/tmp/environment.json'
+                bat 'kubectl exec newman-e2e -n stage -- newman run /tmp/collection.json -e /tmp/environment.json --delay-request 500 --reporters cli,junit,html --reporter-junit-export /tmp/newman-report.xml --reporter-html-export /tmp/newman-report.html'
+                bat 'kubectl cp stage/newman-e2e:/tmp/newman-report.xml newman-report.xml || echo "No XML report"'
+                bat 'kubectl cp stage/newman-e2e:/tmp/newman-report.html newman-report.html || echo "No HTML report"'
+                bat 'kubectl delete pod newman-e2e -n stage --ignore-not-found=true'
             }
             post {
                 always {
-                    junit 'newman-report.xml'
-                    publishHTML([allowMissing: false, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'newman-report.html', reportName: 'Newman E2E Report'])
+                    junit testResults: 'newman-report.xml', allowEmptyResults: true
+                    publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, keepAll: true, reportDir: '.', reportFiles: 'newman-report.html', reportName: 'Newman E2E Report'])
                 }
             }
         }
         stage('Performance Test - Locust') {
             steps {
-                bat 'pip install locust'
-                echo 'Running performance test (normal load, 20 users, 1 min)...'
-                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 20 -r 2 --run-time 60s --headless --csv=locust-performance"
+                echo 'Running Locust performance test inside Kubernetes cluster...'
+                bat 'kubectl run locust-perf --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
+                bat 'kubectl wait --for=condition=ready pod/locust-perf -n stage --timeout=60s'
+                bat 'kubectl cp %LOCUST_FILE% stage/locust-perf:/tmp/locustfile.py'
+                bat 'kubectl exec locust-perf -n stage -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 20 -r 2 --run-time 60s --headless --csv=/tmp/locust-performance'
+                bat 'kubectl cp stage/locust-perf:/tmp/locust-performance_stats.csv locust-performance_stats.csv || echo "No perf stats"'
+                bat 'kubectl cp stage/locust-perf:/tmp/locust-performance_failures.csv locust-performance_failures.csv || echo "No perf failures"'
+                bat 'kubectl cp stage/locust-perf:/tmp/locust-performance_exceptions.csv locust-performance_exceptions.csv || echo "No perf exceptions"'
+                bat 'kubectl delete pod locust-perf -n stage --ignore-not-found=true'
             }
             post {
                 always {
@@ -92,9 +90,15 @@ pipeline {
         }
         stage('Stress Test - Locust') {
             steps {
-                bat 'pip install locust'
-                echo 'Running stress test (high load, 50 users, 1 min)...'
-                bat "locust -f %LOCUST_FILE% --host http://localhost:8180 -u 50 -r 5 --run-time 60s --headless --csv=locust-stress"
+                echo 'Running Locust stress test inside Kubernetes cluster...'
+                bat 'kubectl run locust-stress --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
+                bat 'kubectl wait --for=condition=ready pod/locust-stress -n stage --timeout=60s'
+                bat 'kubectl cp %LOCUST_FILE% stage/locust-stress:/tmp/locustfile.py'
+                bat 'kubectl exec locust-stress -n stage -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 50 -r 5 --run-time 60s --headless --csv=/tmp/locust-stress'
+                bat 'kubectl cp stage/locust-stress:/tmp/locust-stress_stats.csv locust-stress_stats.csv || echo "No stress stats"'
+                bat 'kubectl cp stage/locust-stress:/tmp/locust-stress_failures.csv locust-stress_failures.csv || echo "No stress failures"'
+                bat 'kubectl cp stage/locust-stress:/tmp/locust-stress_exceptions.csv locust-stress_exceptions.csv || echo "No stress exceptions"'
+                bat 'kubectl delete pod locust-stress -n stage --ignore-not-found=true'
             }
             post {
                 always {
@@ -170,8 +174,8 @@ ${stressStats}
     }
     post {
         always {
-            echo 'Cleaning up port-forwards...'
-            bat 'taskkill /F /IM kubectl.exe 2>nul || exit 0'
+            echo 'Cleaning up test pods...'
+            bat 'kubectl delete pod newman-e2e locust-perf locust-stress -n stage --ignore-not-found=true'
         }
         failure {
             echo 'Stage pipeline failed. Images were NOT promoted to stage tag.'
