@@ -4,14 +4,14 @@ metadata:
   name: circleguard-config
 data:
   # PostgreSQL configuration
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql:5432/circleguard"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard"
   SPRING_DATASOURCE_USERNAME: "admin"
   SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
   SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
   SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.PostgreSQLDialect"
 
   # Kafka configuration
-  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.infra.svc.cluster.local:9092"
   SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: "earliest"
   SPRING_KAFKA_CONSUMER_KEY_DESERIALIZER: "org.apache.kafka.common.serialization.StringDeserializer"
   SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER: "org.springframework.kafka.support.serializer.JsonDeserializer"
@@ -19,15 +19,15 @@ data:
   SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: "org.springframework.kafka.support.serializer.JsonSerializer"
 
   # Redis configuration
-  SPRING_DATA_REDIS_HOST: "redis"
+  SPRING_DATA_REDIS_HOST: "redis.infra.svc.cluster.local"
   SPRING_DATA_REDIS_PORT: "6379"
 
   # Neo4j configuration
-  SPRING_NEO4J_URI: "bolt://neo4j:7687"
+  SPRING_NEO4J_URI: "bolt://neo4j.infra.svc.cluster.local:7687"
   SPRING_NEO4J_AUTHENTICATION_USERNAME: "neo4j"
 
   # LDAP configuration
-  SPRING_LDAP_URLS: "ldap://ldap:389"
+  SPRING_LDAP_URLS: "ldap://ldap.infra.svc.cluster.local:389"
   SPRING_LDAP_BASE: "dc=circleguard,dc=edu"
   SPRING_LDAP_USERNAME: "cn=admin,dc=circleguard,dc=edu"
 

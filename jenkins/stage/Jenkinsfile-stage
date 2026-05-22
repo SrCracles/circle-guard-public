@@ -31,6 +31,10 @@ pipeline {
         }
         stage('Deploy to Stage Environment') {
             steps {
+                echo 'Ensuring infra namespace exists and infrastructure is deployed...'
+                bat 'kubectl create namespace infra --dry-run=client -o yaml | kubectl apply -f -'
+                bat 'kubectl apply -k k8s/infra/'
+                bat 'kubectl rollout status deployment -n infra --timeout=300s'
                 echo 'Ensuring stage namespace and base manifests exist...'
                 bat 'kubectl create namespace stage --dry-run=client -o yaml | kubectl apply -f -'
                 bat 'kubectl apply -k k8s/stage/'
@@ -54,13 +58,14 @@ pipeline {
         stage('E2E Tests - Newman') {
             steps {
                 echo 'Running Newman E2E tests inside Kubernetes cluster...'
-                bat 'kubectl run newman-e2e --image=postman/newman:latest -n stage -- sleep 3600'
+                bat 'kubectl run newman-e2e --restart=Never --image=postman/newman:latest -n stage -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/newman-e2e -n stage --timeout=60s'
-                bat 'kubectl cp %NEWMAN_COLLECTION% stage/newman-e2e:/tmp/collection.json'
-                bat 'kubectl cp %NEWMAN_ENVIRONMENT% stage/newman-e2e:/tmp/environment.json'
+                bat 'ping 127.0.0.1 -n 4 > nul'
+                bat 'type %NEWMAN_COLLECTION% | kubectl exec -i newman-e2e -n stage -- sh -c "cat > /tmp/collection.json"'
+                bat 'type %NEWMAN_ENVIRONMENT% | kubectl exec -i newman-e2e -n stage -- sh -c "cat > /tmp/environment.json"'
                 bat 'kubectl exec newman-e2e -n stage -- newman run /tmp/collection.json -e /tmp/environment.json --delay-request 500 --reporters cli,junit,html --reporter-junit-export /tmp/newman-report.xml --reporter-html-export /tmp/newman-report.html'
-                bat 'kubectl cp stage/newman-e2e:/tmp/newman-report.xml newman-report.xml || echo "No XML report"'
-                bat 'kubectl cp stage/newman-e2e:/tmp/newman-report.html newman-report.html || echo "No HTML report"'
+                bat 'kubectl exec newman-e2e -n stage -- cat /tmp/newman-report.xml > newman-report.xml || echo "No XML report"'
+                bat 'kubectl exec newman-e2e -n stage -- cat /tmp/newman-report.html > newman-report.html || echo "No HTML report"'
                 bat 'kubectl delete pod newman-e2e -n stage --ignore-not-found=true'
             }
             post {
@@ -73,13 +78,14 @@ pipeline {
         stage('Performance Test - Locust') {
             steps {
                 echo 'Running Locust performance test inside Kubernetes cluster...'
-                bat 'kubectl run locust-perf --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
+                bat 'kubectl run locust-perf --restart=Never --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/locust-perf -n stage --timeout=60s'
-                bat 'kubectl cp %LOCUST_FILE% stage/locust-perf:/tmp/locustfile.py'
+                bat 'ping 127.0.0.1 -n 4 > nul'
+                bat 'type %LOCUST_FILE% | kubectl exec -i locust-perf -n stage -- sh -c "cat > /tmp/locustfile.py"'
                 bat 'kubectl exec locust-perf -n stage -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 20 -r 2 --run-time 60s --headless --csv=/tmp/locust-performance'
-                bat 'kubectl cp stage/locust-perf:/tmp/locust-performance_stats.csv locust-performance_stats.csv || echo "No perf stats"'
-                bat 'kubectl cp stage/locust-perf:/tmp/locust-performance_failures.csv locust-performance_failures.csv || echo "No perf failures"'
-                bat 'kubectl cp stage/locust-perf:/tmp/locust-performance_exceptions.csv locust-performance_exceptions.csv || echo "No perf exceptions"'
+                bat 'kubectl exec locust-perf -n stage -- cat /tmp/locust-performance_stats.csv > locust-performance_stats.csv || echo "No perf stats"'
+                bat 'kubectl exec locust-perf -n stage -- cat /tmp/locust-performance_failures.csv > locust-performance_failures.csv || echo "No perf failures"'
+                bat 'kubectl exec locust-perf -n stage -- cat /tmp/locust-performance_exceptions.csv > locust-performance_exceptions.csv || echo "No perf exceptions"'
                 bat 'kubectl delete pod locust-perf -n stage --ignore-not-found=true'
             }
             post {
@@ -91,13 +97,14 @@ pipeline {
         stage('Stress Test - Locust') {
             steps {
                 echo 'Running Locust stress test inside Kubernetes cluster...'
-                bat 'kubectl run locust-stress --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
+                bat 'kubectl run locust-stress --restart=Never --image=locustio/locust:2.29.0 -n stage -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/locust-stress -n stage --timeout=60s'
-                bat 'kubectl cp %LOCUST_FILE% stage/locust-stress:/tmp/locustfile.py'
+                bat 'ping 127.0.0.1 -n 4 > nul'
+                bat 'type %LOCUST_FILE% | kubectl exec -i locust-stress -n stage -- sh -c "cat > /tmp/locustfile.py"'
                 bat 'kubectl exec locust-stress -n stage -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 50 -r 5 --run-time 60s --headless --csv=/tmp/locust-stress'
-                bat 'kubectl cp stage/locust-stress:/tmp/locust-stress_stats.csv locust-stress_stats.csv || echo "No stress stats"'
-                bat 'kubectl cp stage/locust-stress:/tmp/locust-stress_failures.csv locust-stress_failures.csv || echo "No stress failures"'
-                bat 'kubectl cp stage/locust-stress:/tmp/locust-stress_exceptions.csv locust-stress_exceptions.csv || echo "No stress exceptions"'
+                bat 'kubectl exec locust-stress -n stage -- cat /tmp/locust-stress_stats.csv > locust-stress_stats.csv || echo "No stress stats"'
+                bat 'kubectl exec locust-stress -n stage -- cat /tmp/locust-stress_failures.csv > locust-stress_failures.csv || echo "No stress failures"'
+                bat 'kubectl exec locust-stress -n stage -- cat /tmp/locust-stress_exceptions.csv > locust-stress_exceptions.csv || echo "No stress exceptions"'
                 bat 'kubectl delete pod locust-stress -n stage --ignore-not-found=true'
             }
             post {
@@ -171,28 +178,29 @@ ${stressStats}
                 }
             }
         }
-        stage('Cleanup Local Images') {
-            steps {
-                script {
-                    def services = [
-                        'circleguard-auth-service',
-                        'circleguard-identity-service',
-                        'circleguard-form-service',
-                        'circleguard-promotion-service',
-                        'circleguard-notification-service',
-                        'circleguard-gateway-service'
-                    ]
-                    for (svc in services) {
-                        bat "docker rmi ${DOCKER_USER}/${svc}:dev ${DOCKER_USER}/${svc}:stage || exit 0"
-                    }
-                }
-            }
-        }
     }
     post {
         always {
-            echo 'Cleaning up test pods...'
-            bat 'kubectl delete pod newman-e2e locust-perf locust-stress -n stage --ignore-not-found=true'
+            echo 'Tearing down stage resources and cleaning local images...'
+            bat 'kubectl delete deployment --all -n stage --ignore-not-found=true'
+            bat 'kubectl delete service --all -n stage --ignore-not-found=true'
+            bat 'kubectl delete configmap --all -n stage --ignore-not-found=true'
+            bat 'kubectl delete secret --all -n stage --ignore-not-found=true'
+            bat 'kubectl delete pod --all -n stage --force --grace-period=0 --ignore-not-found=true'
+            script {
+                def services = [
+                    'circleguard-auth-service',
+                    'circleguard-identity-service',
+                    'circleguard-form-service',
+                    'circleguard-promotion-service',
+                    'circleguard-notification-service',
+                    'circleguard-gateway-service'
+                ]
+                for (svc in services) {
+                    bat "docker rmi ${DOCKER_USER}/${svc}:dev 2>nul || exit 0"
+                    bat "docker rmi ${DOCKER_USER}/${svc}:stage 2>nul || exit 0"
+                }
+            }
         }
         failure {
             echo 'Stage pipeline failed. Images were NOT promoted to stage tag.'

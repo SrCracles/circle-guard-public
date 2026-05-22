@@ -12,7 +12,7 @@ $ErrorActionPreference = "Stop"
 if (-not $Force) {
     Write-Warning "This will DELETE resources from your cluster."
     if ($DeleteCluster) {
-        Write-Error "The cluster '$ClusterName' will be COMPLETELY REMOVED."
+        Write-Warning "The cluster '$ClusterName' will be COMPLETELY REMOVED."
     }
     $confirm = Read-Host "Are you sure? Type 'yes' to continue"
     if ($confirm -ne "yes") {
