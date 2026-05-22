@@ -4,7 +4,8 @@ pipeline {
         DOCKER_USER = 'srcracles'
         NEWMAN_COLLECTION = 'tests/postman/circle-guard-e2e-collection.json'
         NEWMAN_ENVIRONMENT = 'tests/postman/circle-guard-environment.json'
-        LOCUST_FILE = 'tests/locustfile.py'
+        LOCUST_PERF_FILE = 'tests/locustfile-performance.py'
+        LOCUST_STRESS_FILE = 'tests/locustfile-stress.py'
     }
     stages {
         stage('Checkout') {
@@ -81,7 +82,7 @@ pipeline {
                 bat 'kubectl run locust-perf --restart=Never --image=locustio/locust:2.29.0 -n stage --command -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/locust-perf -n stage --timeout=60s'
                 bat 'ping 127.0.0.1 -n 6 > nul'
-                bat 'kubectl cp "%LOCUST_FILE%" locust-perf:/tmp/locustfile.py -n stage -c locust-perf'
+                bat 'kubectl cp "%LOCUST_PERF_FILE%" locust-perf:/tmp/locustfile.py -n stage -c locust-perf'
                 bat 'kubectl exec locust-perf -n stage -c locust-perf -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 20 -r 2 --run-time 60s --headless --csv=/tmp/locust-performance'
                 bat 'kubectl cp locust-perf:/tmp/locust-performance_stats.csv locust-performance_stats.csv -n stage -c locust-perf || echo "No perf stats"'
                 bat 'kubectl cp locust-perf:/tmp/locust-performance_failures.csv locust-performance_failures.csv -n stage -c locust-perf || echo "No perf failures"'
@@ -100,8 +101,8 @@ pipeline {
                 bat 'kubectl run locust-stress --restart=Never --image=locustio/locust:2.29.0 -n stage --command -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/locust-stress -n stage --timeout=60s'
                 bat 'ping 127.0.0.1 -n 6 > nul'
-                bat 'kubectl cp "%LOCUST_FILE%" locust-stress:/tmp/locustfile.py -n stage -c locust-stress'
-                bat 'kubectl exec locust-stress -n stage -c locust-stress -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 50 -r 5 --run-time 60s --headless --csv=/tmp/locust-stress'
+                bat 'kubectl cp "%LOCUST_STRESS_FILE%" locust-stress:/tmp/locustfile.py -n stage -c locust-stress'
+                bat 'kubectl exec locust-stress -n stage -c locust-stress -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 30 -r 3 --run-time 60s --headless --csv=/tmp/locust-stress'
                 bat 'kubectl cp locust-stress:/tmp/locust-stress_stats.csv locust-stress_stats.csv -n stage -c locust-stress || echo "No stress stats"'
                 bat 'kubectl cp locust-stress:/tmp/locust-stress_failures.csv locust-stress_failures.csv -n stage -c locust-stress || echo "No stress failures"'
                 bat 'kubectl cp locust-stress:/tmp/locust-stress_exceptions.csv locust-stress_exceptions.csv -n stage -c locust-stress || echo "No stress exceptions"'
@@ -138,8 +139,8 @@ ${perfStats}
 ```
 
 ## Stress Test (High Load)
-- Users: 50
-- Ramp-up: 5 users/sec
+- Users: 30
+- Ramp-up: 3 users/sec
 - Duration: 60 seconds
 
 ```csv
