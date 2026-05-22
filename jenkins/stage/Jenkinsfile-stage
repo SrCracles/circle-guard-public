@@ -180,7 +180,7 @@ ${stressStats}
         }
     }
     post {
-        always {
+    /* always {
             echo 'Tearing down stage resources and cleaning local images...'
             bat 'kubectl delete deployment --all -n stage --ignore-not-found=true'
             bat 'kubectl delete service --all -n stage --ignore-not-found=true'
@@ -201,7 +201,7 @@ ${stressStats}
                     bat "docker rmi ${DOCKER_USER}/${svc}:stage 2>nul || exit 0"
                 }
             }
-        }
+        } */
         failure {
             echo 'Stage pipeline failed. Images were NOT promoted to stage tag.'
         }
