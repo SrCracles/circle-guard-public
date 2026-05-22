@@ -1,45 +1,44 @@
 package com.circleguard.notification.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class ExposureNotificationListenerTest {
 
-    @Autowired
-    private ExposureNotificationListener listener;
-
-    @MockBean
-    private KafkaTemplate<String, String> kafkaTemplate;
-
-    @MockBean
+    @Mock
     private NotificationDispatcher dispatcher;
 
-    @MockBean
-    private org.springframework.mail.javamail.JavaMailSender mailSender;
+    @Mock
+    private ObjectMapper objectMapper;
 
-    @MockBean
-    private org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder;
+    @Mock
+    private LmsService lmsService;
 
-    @MockBean
-    private EmailService emailService;
-
-    @MockBean
-    private SmsService smsService;
-
-    @MockBean
-    private PushService pushService;
+    @InjectMocks
+    private ExposureNotificationListener listener;
 
     @Test
-    void shouldHandleStatusChangeEventWithoutError() {
-        String mockEvent = "{\"userId\": \"user-123\", \"newStatus\": \"EXPOSED\"}";
+    void shouldHandleStatusChangeEventWithoutError() throws Exception {
+        String mockEvent = "{\"anonymousId\": \"user-123\", \"status\": \"EXPOSED\"}";
+        JsonNode mockNode = mock(JsonNode.class);
+        JsonNode mockAnonymousIdNode = mock(JsonNode.class);
+        JsonNode mockStatusNode = mock(JsonNode.class);
+        when(objectMapper.readTree(mockEvent)).thenReturn(mockNode);
+        when(mockNode.path("anonymousId")).thenReturn(mockAnonymousIdNode);
+        when(mockAnonymousIdNode.asText("unknown")).thenReturn("user-123");
+        when(mockNode.path("status")).thenReturn(mockStatusNode);
+        when(mockStatusNode.asText("UNKNOWN")).thenReturn("EXPOSED");
+
         assertDoesNotThrow(() -> listener.handleStatusChange(mockEvent));
     }
 }

@@ -1,21 +1,28 @@
 package com.circleguard.notification.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.util.ReflectionTestUtils;
+
 import java.util.concurrent.CompletableFuture;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
 public class LmsServiceTest {
 
-    @Autowired
-    private LmsService lmsService;
+    private LmsServiceImpl lmsService;
+
+    @BeforeEach
+    void setUp() {
+        lmsService = new LmsServiceImpl();
+        ReflectionTestUtils.setField(lmsService, "lmsApiUrl", "https://lms.university.edu/api/v1");
+        ReflectionTestUtils.setField(lmsService, "identityApiUrl", "http://circleguard-identity-service:8081");
+    }
 
     @Test
     void testRemoteAttendanceSync() {
         CompletableFuture<Void> future = lmsService.syncRemoteAttendance("student-123", "PROBABLE");
-        future.join(); // Wait for completion
+        future.join();
         assertThat(future).isCompleted();
     }
 }

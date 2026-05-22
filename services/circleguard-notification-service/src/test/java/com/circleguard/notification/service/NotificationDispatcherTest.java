@@ -1,46 +1,49 @@
 package com.circleguard.notification.service;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class NotificationDispatcherTest {
 
-    @Autowired
-    private NotificationDispatcher dispatcher;
-
-    @MockBean
+    @Mock
     private EmailService emailService;
 
-    @MockBean
+    @Mock
     private SmsService smsService;
 
-    @MockBean
+    @Mock
+    private PushService pushService;
+
+    @Mock
     private TemplateService templateService;
 
-    @MockBean
-    private PushService pushService;
+    @InjectMocks
+    private NotificationDispatcher dispatcher;
 
     @Test
     void shouldDispatchToAllChannelsConcurrently() throws Exception {
-        // Setup slow services to test concurrency
         when(emailService.sendAsync(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
         when(smsService.sendAsync(any(), any())).thenReturn(CompletableFuture.completedFuture(null));
         when(pushService.sendAsync(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(null));
+        when(templateService.generateEmailContent(any(), any())).thenReturn("email");
+        when(templateService.generatePushContent(any())).thenReturn("push");
+        when(templateService.generatePushMetadata(any())).thenReturn(Map.of());
+        when(templateService.generateSmsContent(any())).thenReturn("sms");
 
         dispatcher.dispatch("user-123", "Your health status has changed.");
 
-        verify(emailService, timeout(1000)).sendAsync(eq("user-123"), any());
-        verify(smsService, timeout(1000)).sendAsync(eq("user-123"), any());
-        verify(pushService, timeout(1000)).sendAsync(eq("user-123"), any(), any());
+        verify(emailService).sendAsync(eq("user-123"), any());
+        verify(smsService).sendAsync(eq("user-123"), any());
+        verify(pushService).sendAsync(eq("user-123"), any(), any());
     }
 }
