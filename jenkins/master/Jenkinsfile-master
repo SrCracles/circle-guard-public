@@ -83,7 +83,7 @@ pipeline {
                     def docs = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^docs\\|^doc\" 2>nul || echo \"\"")
                     def tests = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^test\\|^tests\" 2>nul || echo \"\"")
                     def ci = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^ci\\|^build\\|^pipeline\" 2>nul || echo \"\"")
-                    def others = runBatOutput("git log ${releaseRangePrefix}--oneline 2>nul || echo \"\"")
+                    def others = runBatOutput("git log ${releaseRangePrefix}--oneline --invert-grep --grep=\"^feat\\|^feature\\|^fix\\|^bugfix\\|^docs\\|^doc\\|^test\\|^tests\\|^ci\\|^build\\|^pipeline\" 2>nul || echo \"\"")
 
                     def releaseBody = """## Changes
 
