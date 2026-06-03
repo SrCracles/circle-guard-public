@@ -1,11 +1,13 @@
 pipeline {
     agent any
     environment {
-        DOCKER_USER = 'srcracles'
+        DOCKER_USER = "${env.CG_DOCKER_USER ?: 'srcracles'}"
+        DOCKERHUB_CREDENTIALS_ID = "${env.CG_DOCKERHUB_CREDENTIALS_ID ?: 'dockerhub-credentials'}"
+        GITHUB_TOKEN_ID = "${env.CG_GITHUB_TOKEN_ID ?: 'github-token'}"
+        GITHUB_OWNER = "${env.CG_GITHUB_OWNER ?: 'SrCracles'}"
+        GITHUB_REPO = "${env.CG_GITHUB_REPO ?: 'circle-guard-public'}"
         VERSION = "${env.BUILD_NUMBER}"
         RELEASE_NOTES_FILE = "RELEASE_NOTES_v${env.BUILD_NUMBER}.md"
-        GITHUB_OWNER = 'SrCracles'
-        GITHUB_REPO = 'circle-guard-public'
     }
     stages {
         stage('Checkout') {
@@ -129,7 +131,7 @@ ${others ?: "- No other changes in this release."}
         }
         stage('Git Tag Release') {
             steps {
-                withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                withCredentials([string(credentialsId: env.GITHUB_TOKEN_ID, variable: 'GITHUB_TOKEN')]) {
                     bat 'git config user.name "Jenkins CI"'
                     bat 'git config user.email "jenkins@users.noreply.github.com"'
                     bat "git tag -a v%VERSION% -m \"Release v%VERSION%\""
@@ -139,7 +141,7 @@ ${others ?: "- No other changes in this release."}
         }
         stage('Publish GitHub Release') {
             steps {
-                withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                withCredentials([string(credentialsId: env.GITHUB_TOKEN_ID, variable: 'GITHUB_TOKEN')]) {
                     script {
                         def jsonBody = """
                         {

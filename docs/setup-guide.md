@@ -62,7 +62,23 @@ Ir a **Manage Jenkins > Credentials > System > Global credentials** y agregar:
 - **ID:** `github-token`
 - **Secret:** El Personal Access Token de GitHub (necesita permisos `repo` y `write:packages`)
 
-### 2.3 Configurar Variable de Entorno KUBECONFIG
+### 2.3 Configurar Global Properties (Externalized Configuration)
+
+Ir a **Manage Jenkins > System** y buscar la seccion **Global properties > Environment variables**.
+
+Estas variables centralizan la configuracion del proyecto. Solo se configuran una vez y todos los pipelines las usan automaticamente:
+
+| Nombre | Valor | Descripcion |
+|--------|-------|-------------|
+| `CG_DOCKER_USER` | `srcracles` | Usuario de DockerHub donde se suben las imagenes |
+| `CG_GITHUB_OWNER` | `SrCracles` | Owner del repositorio GitHub |
+| `CG_GITHUB_REPO` | `circle-guard-public` | Nombre del repositorio GitHub |
+
+> **Nota:** Los valores de la tabla son los defaults del proyecto. Si alguien hace un fork o trabaja con su propia cuenta de DockerHub, solo debe cambiar estos valores aqui, sin tocar ningun Jenkinsfile.
+
+> Los pipelines tienen fallback incorporado: si alguna variable no esta definida, usaran el valor por defecto. Sin embargo, se recomienda configurarlas explicitamente para mayor claridad.
+
+### 2.4 Configurar Variable de Entorno KUBECONFIG
 
 Ir a **Manage Jenkins > System** y buscar la seccion **Environment variables**.
 

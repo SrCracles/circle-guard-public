@@ -1,7 +1,8 @@
 pipeline {
     agent any
     environment {
-        DOCKER_USER = 'srcracles'
+        DOCKER_USER = "${env.CG_DOCKER_USER ?: 'srcracles'}"
+        DOCKERHUB_CREDENTIALS_ID = "${env.CG_DOCKERHUB_CREDENTIALS_ID ?: 'dockerhub-credentials'}"
         SERVICE_NAME = 'circleguard-form-service'
         SERVICE_PORT = '8086'
         DOCKER_IMAGE = "${DOCKER_USER}/${SERVICE_NAME}"
@@ -34,7 +35,7 @@ pipeline {
         }
         stage('Push Docker Image (dev tag)') {
             steps {
-                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                withDockerRegistry([credentialsId: env.DOCKERHUB_CREDENTIALS_ID, url: '']) {
                     bat "docker push %DOCKER_IMAGE%:dev"
                 }
             }
