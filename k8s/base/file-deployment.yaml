@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: circleguard-file-service
+  labels:
+    app: circleguard-file-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: circleguard-file-service
+  template:
+    metadata:
+      labels:
+        app: circleguard-file-service
+    spec:
+      containers:
+        - name: circleguard-file-service
+          image: srcracles/circleguard-file-service:dev
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8085
+          envFrom:
+            - configMapRef:
+                name: circleguard-config
+            - secretRef:
+                name: circleguard-secrets
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: "circleguard-file-service"
