@@ -1,58 +1,58 @@
 # Documentación de Pruebas (Tests Docs)
 
-Este documento centraliza todas las pruebas implementadas en el proyecto CircleGuard, organizadas por tipo de prueba y por microservicio. 
+Este documento centraliza todas las pruebas implementadas en el proyecto CircleGuard, organizadas por tipo de prueba y por microservicio. Además, documenta la importancia y justificación de cada conjunto de pruebas dentro de la plataforma.
 
 ## 1. Pruebas Unitarias
 
 Las pruebas unitarias validan la lógica interna de cada componente aislando sus dependencias mediante *mocks*.
 
 ### `circleguard-auth-service`
-* `JwtTokenServiceTest`: Validar generación, expiración y parseo de tokens JWT.
-* `DualChainAuthenticationProviderTest`: Probar la lógica de autenticación fallback (LDAP y Base de datos local).
-* `LoginControllerTest`: Probar controlador de login de forma unitaria.
+* **`JwtTokenServiceTest`**: Generacion y validacion de tokens JWT (claims, expiracion, firma). **Importancia:** El JWT es el mecanismo central de autenticacion stateless de toda la plataforma. Un bug en la generacion o validacion comprometeria la seguridad de todos los servicios.
+* **`DualChainAuthenticationProviderTest`**: Login fallback LDAP vs local. **Importancia:** La autenticacion dual es un requisito funcional critico. Si el fallback falla, usuarios invitados o cuentas locales quedarian bloqueadas.
+* **`LoginControllerTest`**: Probar controlador de login de forma unitaria.
 
 ### `circleguard-identity-service`
-* `IdentityVaultServiceTest`: Generación de IDs anonimizados únicos y uso de algoritmos criptográficos.
-* `IdentityEncryptionConverterTest`: Validar encriptación y desencriptación de los IDs reales.
-* `IdentityMappingRepositoryTest`: Testeo unitario del repositorio de persistencia.
-* `IdentityVaultControllerTest`: Controladores REST de gestión de identidades.
+* **`IdentityEncryptionConverterTest`**: Encriptacion/desencriptacion de IDs. **Importancia:** FERPA y la privacidad del estudiante dependen de que las identidades reales nunca se expongan. Garantiza que los datos en reposo sean irreversibles sin la clave.
+* **`IdentityVaultServiceTest`**: Generacion de IDs anonimizados unicos y hash SHA-256. **Importancia:** La integridad del sistema depende de que cada identidad real genere exactamente un unico ID anonimo determinista. Un fallo aquí rompería el trazado de contactos.
+* **`IdentityMappingRepositoryTest`**: Testeo unitario del repositorio de persistencia.
+* **`IdentityVaultControllerTest`**: Controladores REST de gestión de identidades.
 
 ### `circleguard-form-service`
-* `SymptomMapperTest`: Verifica que los síntomas se mapen de forma correcta al nivel de riesgo respectivo.
-* `HealthSurveyControllerTest`: Probar endpoints de envío de encuestas médicas.
-* `AttachmentControllerTest`: Validar adjuntos de encuestas.
-* `QuestionnaireControllerTest`: Operaciones CRUD y listado de cuestionarios.
+* **`SymptomMapperTest`**: Mapeo correcto de sintomas a niveles de riesgo. **Importancia:** Este componente decide si un usuario debe ser marcado como sospechoso basado en sus respuestas. Afecta directamente la metrica de "False Positive Rate < 15%".
+* **`HealthSurveyControllerTest`**: Probar endpoints de envío de encuestas médicas.
+* **`AttachmentControllerTest`**: Validar adjuntos de encuestas.
+* **`QuestionnaireControllerTest`**: Operaciones CRUD y listado de cuestionarios.
 
 ### `circleguard-promotion-service`
-* `StatusLifecycleTest`: Verifica que las transiciones de estado de salud (ACTIVE -> SUSPECT -> PROBABLE -> CONFIRMED) se hagan correctamente.
-* `GraphServiceTest`: Prueba la creación de queries y la lógica de grafos en Neo4j.
-* `HealthStatusServiceTest`: Servicios de evaluación de salud.
-* `HealthStatusReevaluationTest`: Reevaluaciones asíncronas automáticas.
-* `AdministrativeCorrectionTest`: Funcionalidades administrativas para corrección de estado.
-* `FloorServiceTest`: Lógica para validar pisos o ubicaciones físicas.
-* `SurveyListenerTest`: Recepción de encuestas.
-* `HealthStatusControllerTest`: Controlador REST de estados.
+* **`StatusLifecycleTest`**: Transiciones de estado validas (ACTIVE->SUSPECT->PROBABLE->CONFIRMED). **Importancia:** La maquina de estados de salud es el nucleo del negocio. La contencion rapida (< 60 segundos) depende de transiciones automaticas correctas.
+* **`GraphServiceTest`**: Construccion correcta de queries Cypher y deteccion de circulos. **Importancia:** Las queries Cypher en Neo4j son la base del trazado de contactos. Un error comprometeria la eficacia del aislamiento y la seguridad del campus.
+* **`HealthStatusServiceTest`**: Servicios de evaluación de salud.
+* **`HealthStatusReevaluationTest`**: Reevaluaciones asíncronas automáticas.
+* **`AdministrativeCorrectionTest`**: Funcionalidades administrativas para corrección de estado.
+* **`FloorServiceTest`**: Lógica para validar pisos o ubicaciones físicas.
+* **`SurveyListenerTest`**: Recepción de encuestas.
+* **`HealthStatusControllerTest`**: Controlador REST de estados.
 
 ### `circleguard-notification-service`
-* `TemplateServiceTest`: Renderizado de templates (FreeMarker) inyectando variables.
-* `NotificationDispatcherTest`: Gestión y despacho de notificaciones hacia los distintos canales (email, sms).
-* `ExposureNotificationListenerTest`: Recepción de eventos de exposición de Kafka.
-* `PriorityAlertListenerTest`: Recepción de notificaciones críticas.
-* `NotificationRetryTest`: Lógica de reintentos ante caídas o fallos.
-* `LmsServiceTest`: Interacción con el LMS (Blackboard/Moodle) del campus.
-* `RoomReservationServiceTest`: Funcionalidad de cancelación o gestión de reservas.
+* **`TemplateServiceTest`**: Renderizado de templates Freemarker con variables. **Importancia:** Probar el renderizado garantiza que los usuarios reciban mensajes con su estado correcto y enlaces funcionales, evitando confusion en momentos criticos de salud.
+* **`NotificationDispatcherTest`**: Gestión y despacho de notificaciones hacia los distintos canales (email, sms).
+* **`ExposureNotificationListenerTest`**: Recepción de eventos de exposición de Kafka.
+* **`PriorityAlertListenerTest`**: Recepción de notificaciones críticas.
+* **`NotificationRetryTest`**: Lógica de reintentos ante caídas o fallos.
+* **`LmsServiceTest`**: Interacción con el LMS (Blackboard/Moodle) del campus.
+* **`RoomReservationServiceTest`**: Funcionalidad de cancelación o gestión de reservas.
 
 ### `circleguard-gateway-service`
-* `QrValidationServiceTest` y `QrValidationServiceAdditionalTest`: Lógica criptográfica y de expiración de tokens QR.
-* `GateControllerTest`: Operaciones REST del controlador de ingreso.
+* **`QrValidationServiceTest`** y **`QrValidationServiceAdditionalTest`**: Validacion de tokens expirados/firmados incorrectamente. **Importancia:** Si un token invalido o manipulado pasara la validacion, personas con riesgo sanitario podrian ingresar al campus, violando la seguridad biologica.
+* **`GateAccessDecisionTest`** / **`GateControllerTest`**: Decision GREEN/RED basada en estado Redis. **Importancia:** Es el ultimo paso de seguridad fisica. Garantiza que la barrera fisica del campus funcione conforme a la politica de salud.
 
 ### `circleguard-file-service`
-* `FileStorageServiceTest`: Lógica de subida al sistema de archivos local, verificando que genere UUIDs adecuados sin colisiones.
-* `FileUploadControllerTest`: Lógica del endpoint de subida de archivos de manera unitaria.
+* **`FileStorageServiceTest`**: Lógica de subida al sistema de archivos local, verificando que genere UUIDs adecuados sin colisiones. **Importancia:** Asegura que los certificados y excusas médicas no se sobreescriban ni se pierdan.
+* **`FileUploadControllerTest`**: Lógica del endpoint de subida de archivos de manera unitaria.
 
 ### `circleguard-dashboard-service`
-* `KAnonymityFilterTest`: Valida que las métricas sensibles y agrupaciones de pocos usuarios (K < 5) se camuflen correctamente.
-* `AnalyticsServiceTest`: Prueba el aglomerado de las estadísticas sin depender de las bases de datos.
+* **`KAnonymityFilterTest`**: Valida que las métricas sensibles y agrupaciones de pocos usuarios (K < 5) se camuflen correctamente. **Importancia:** Evita la re-identificación de estudiantes en reportes públicos o administrativos.
+* **`AnalyticsServiceTest`**: Prueba el aglomerado de las estadísticas sin depender de las bases de datos.
 
 ---
 
@@ -60,13 +60,15 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 
 Estas pruebas validan la correcta comunicación entre dos o más componentes reales (como Kafka, Base de Datos, Redis o llamadas HTTP mediante RestTemplate/Feign).
 
-* **`AuthIdentityIntegrationTest`** (`auth-service` -> `identity-service`): Verifica el mapeo de identidad anónima tras un login.
-* **`FormToPromotionKafkaTest`** (`form-service` -> `Kafka` -> `promotion-service`): Asegura que al enviar un formulario, el evento viaje por Kafka y pueda disparar promociones de estado.
-* **`PromotionToNotificationKafkaTest`** (`promotion-service` -> `Kafka` -> `notification-service`): Validar las notificaciones automáticas tras un cambio a "CONFIRMED".
-* **`GatewayRedisIntegrationTest`** (`gateway-service` -> `Redis`): Validar que el token de ingreso en Redis se lea e interprete correctamente para permitir/denegar accesos.
-* **`PromotionNeo4jTracingTest`** (`promotion-service` -> `Neo4j`): Interacción real contra Neo4j para garantizar la búsqueda Cypher.
+* **`AuthIdentityIntegrationTest`** (`auth-service` -> `identity-service`): Login exitoso crea mapeo anonimo; login fallido NO llama a identity service. **Importancia:** Garantiza que la separacion de responsabilidades funcione correctamente y evita llamadas innecesarias cuando la autenticacion falla.
+* **`FormToPromotionKafkaTest`** (`form-service` -> `Kafka` -> `promotion-service`): Envio de survey con/sin sintomas emite evento correspondiente. **Importancia:** Valida que el pipeline de eventos de salud funcione end-to-end; si Kafka falla, el sistema no puede reaccionar ante brotes.
+* **`PromotionToNotificationKafkaTest`** (`promotion-service` -> `Kafka` -> `notification-service`): Estado CONFIRMED emite alerta de prioridad, SUSPECT no la emite. **Importancia:** Asegura que las alertas se generen con la gravedad adecuada y no generen panico innecesario.
+* **`GatewayRedisIntegrationTest`** (`gateway-service` -> `Redis`): Token GREEN permite acceso; token RED deniega. **Importancia:** Protege la barrera fisica del campus.
+* **`PromotionNeo4jTracingTest`** (`promotion-service` -> `Neo4j`): `detectAndFormCircles` ejecuta query Cypher con filtros de distancia y tiempo. **Importancia:** El rastreo de contactos es el nucleo del sistema; un error aquí invalidaria todo el modelo de contencion.
 * **`FileUploadControllerIntegrationTest`** (`file-service`): Prueba a nivel de contenedor Web MVC del envío Multipart de archivos.
 * **`AnalyticsControllerTest`** (`dashboard-service`): Test de integración MockMvc.
+
+> **Configuracion de Tests**: Se configuro **H2 en memoria** para los tests de `form-service` y otros que usen repositorios, permitiendo ejecutar las pruebas de integracion sin depender de PostgreSQL real durante las fases de build y dev. Las dependencias externas como Kafka, Redis y Neo4j se simulan mediante **mocks** (Mockito), sin levantar contenedores reales.
 
 ---
 
@@ -79,18 +81,18 @@ Las pruebas residen en la carpeta `tests/postman/`:
 * Entorno de Variables: `circle-guard-environment.json`
 
 **Flujos testeados:**
-1. Autenticación y generación de JWT de un estudiante.
-2. Formulario de salud con y sin síntomas.
-3. Promoción de estado a "Confirmado" por un administrador.
-4. Generación y consumo de alertas prioritarias tras confirmar casos.
-5. Verificación en el gateway simulando validación de entrada por código QR.
+1. **Flujo de Autenticacion**: Login retorna JWT y anonymousId. **Importancia:** Es la puerta de entrada al sistema; si falla, ningun usuario puede acceder.
+2. **Flujo de Formulario de Salud**: Envio de survey persiste síntomas. **Importancia:** La precision de los datos determina si el sistema detecta o no un brote.
+3. **Flujo de Promocion de Estado**: Admin con rol puede actualizar casos. **Importancia:** Solo personal autorizado debe poder confirmar casos, evitando que cualquier usuario altere estados.
+4. **Flujo de Notificacion**: Confirmación genera evento prioritario. **Importancia:** La cadena de notificacion es critica para la respuesta, un fallo deja a la comunidad sin avisar.
+5. **Flujo de Acceso al Campus**: QR valido (GREEN) vs Invalido (RED). **Importancia:** Ultima linea de defensa fisica.
 
 ---
 
 ## 4. Pruebas de Rendimiento / Estrés (Locust)
 
-Las pruebas están configuradas utilizando `Locust` con base en el script de Python `tests/locustfile.py`. Además existe una prueba en Spring Boot en la suite `PromotionPerformanceTest`.
+Las pruebas están configuradas utilizando `Locust` con base en el script de Python `tests/locustfile.py` (y sus variantes `locustfile-performance.py`, `locustfile-stress.py`). Además existe una prueba en Spring Boot en la suite `PromotionPerformanceTest`.
 
 **Escenarios probados:**
-* **Performance Test (carga normal)**: ~20 usuarios concurrentes validando comportamiento durante 1 minuto. Simula un uso "normal" universitario.
-* **Stress Test (carga alta)**: ~50 usuarios concurrentes, apuntando a ver los límites locales de Kind (o minikube). Mide latencias mayores a 500ms o tasas de error cuando se satura el thread pool.
+* **Performance Test (carga normal)**: ~20 usuarios concurrentes durante 60 segundos. Latencia promedio < 500ms, tasa de errores < 5%. **Importancia:** Valida comportamiento estable bajo carga representativa del dia a dia.
+* **Stress Test (carga extrema)**: ~50 usuarios concurrentes durante 60 segundos. **Importancia:** Identifica el limite del sistema antes de que falle; se utilizan valores conservadores para no saturar la PC local (entorno Kind).
