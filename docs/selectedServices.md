@@ -1,8 +1,8 @@
 # Microservicios Seleccionados para Pruebas y Release
 
-## 1. Los 6 Microservicios Escogidos
+## 1. Los 8 Microservicios Escogidos
 
-Basandose en el criterio del taller (*"que se comuniquen entre si para permitir la posterior implementacion de pruebas que los involucren"*), estos son los 6 microservicios seleccionados:
+Basandose en el criterio del taller (*"que se comuniquen entre si para permitir la posterior implementacion de pruebas que los involucren"*), estos son los 8 microservicios seleccionados:
 
 | # | Microservicio | Puerto | Justificacion |
 |---|--------------|--------|---------------|
@@ -12,15 +12,10 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 | 4 | **circleguard-promotion-service** | `8088` | **El corazon del sistema**. Consume Kafka de form-service, usa Neo4j para grafos de contacto, produce Kafka para notification-service. Tiene tests de performance con Testcontainers. |
 | 5 | **circleguard-notification-service** | `8082` | **Consume** Kafka de promotion-service y hace llamadas HTTP a **auth-service** para validar permisos. Multi-canal (email/SMS/push). Ideal para tests de integracion end-to-end. |
 | 6 | **circleguard-gateway-service** | `8087` | Validacion de QR para acceso fisico al campus. Usa **Redis** para estado de tokens. Es un flujo de usuario real y diferente (no usa Kafka ni BD relacional), aporta variedad al pipeline. |
+| 7 | **circleguard-file-service** | `8085` | Manejo de archivos (certificados). Se añadio para completar el ciclo CI/CD. |
+| 8 | **circleguard-dashboard-service** | `8084` | Lee de promotion-service y presenta analytics de forma anonimizada. |
 
-## 2. Microservicios NO Escogidos
-
-| Microservicio | Puerto | Razon de Exclusion |
-|--------------|--------|-------------------|
-| **circleguard-file-service** | `8085` | Es completamente standalone, no se comunica con ningun otro servicio. No aporta valor para pruebas de integracion ni E2E entre servicios. |
-| **circleguard-dashboard-service** | `8084` | Aunque lee de promotion-service, es un consumidor pasivo de analytics. No genera eventos ni afecta el flujo core de negocio. Su exclusion permite enfocar las pruebas en los flujos transaccionales criticos. |
-
-## 3. Flujos de Comunicacion que Podemos Probar
+## 2. Flujos de Comunicacion que Podemos Probar
 
 ### Diagrama de Comunicacion entre Servicios Seleccionados
 
@@ -67,7 +62,7 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 | Asincrono Kafka | promotion-service | notification-service | Kafka | Cancelar reservas de espacios |
 | Cache | gateway-service | Redis | Spring Data Redis | Validar tokens QR de acceso |
 
-## 4. Tests Propuestos a Implementar
+## 3. Tests Propuestos a Implementar
 
 ### A. Pruebas Unitarias (5+ nuevas)
 
@@ -117,7 +112,7 @@ Basandose en el criterio del taller (*"que se comuniquen entre si para permitir 
 
 > **Nota:** Las pruebas usan valores conservadores (20 y 50 usuarios, 1 minuto cada una) para no saturar la PC local donde corre el cluster de Kind y Jenkins.
 
-## 5. Estructura de Carpetas del Proyecto
+## 4. Estructura de Carpetas del Proyecto
 
 Todo el trabajo de pipelines, Kubernetes, pruebas y automatizacion se mantendra **dentro** del repositorio `circle-guard-public`:
 
@@ -170,7 +165,9 @@ circle-guard-public/
 │   │   ├── Jenkinsfile-form             # Pipeline dev para form-service
 │   │   ├── Jenkinsfile-promotion        # Pipeline dev para promotion-service
 │   │   ├── Jenkinsfile-notification     # Pipeline dev para notification-service
-│   │   └── Jenkinsfile-gateway          # Pipeline dev para gateway-service
+│   │   ├── Jenkinsfile-gateway          # Pipeline dev para gateway-service
+│   │   ├── Jenkinsfile-file             # Pipeline dev para file-service
+│   │   └── Jenkinsfile-dashboard        # Pipeline dev para dashboard-service
 │   ├── stage/
 │   │   └── Jenkinsfile-stage            # Pipeline stage (E2E + Locust)
 │   └── master/
@@ -188,12 +185,14 @@ circle-guard-public/
 │   │   └── Dockerfile                   # Imagen Docker para notification-service (port 8082)
 │   ├── circleguard-gateway-service/
 │   │   └── Dockerfile                   # Imagen Docker para gateway-service (port 8087)
-│   ├── circleguard-file-service/        # No seleccionado
-│   └── circleguard-dashboard-service/   # No seleccionado
+│   ├── circleguard-file-service/
+│   │   └── Dockerfile                   # Imagen Docker para file-service (port 8085)
+│   └── circleguard-dashboard-service/
+│       └── Dockerfile                   # Imagen Docker para dashboard-service (port 8084)
 └── ... (archivos existentes del proyecto)
 ```
 
-## 6. Resumen de Decisiones de Arquitectura de Pipelines
+## 5. Resumen de Decisiones de Arquitectura de Pipelines
 
 | Aspecto | Decision |
 |---------|----------|
@@ -206,7 +205,7 @@ circle-guard-public/
 | **Release Notes** | GitHub API con token personal |
 | **Permisos Jenkins** | Usuario `jenkins` con acceso a `kubeconfig` y permisos adecuados |
 
-## 7. Matriz de Servicios vs. Ambientes
+## 6. Matriz de Servicios vs. Ambientes
 
 | Servicio | Dev Pipeline | Stage Pipeline | Master Pipeline |
 |----------|-------------|----------------|-----------------|
@@ -216,5 +215,7 @@ circle-guard-public/
 | promotion-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
 | notification-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
 | gateway-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| file-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| dashboard-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
 
 > **Nota**: La infraestructura compartida (Kafka, Neo4j, PostgreSQL, Redis, Zookeeper, OpenLDAP) se levanta como parte del ambiente Stage para las pruebas E2E y de rendimiento.

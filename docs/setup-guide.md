@@ -122,6 +122,8 @@ Repetir el paso anterior para cada servicio. La unica diferencia es el **Script 
 | circle-guard-promotion-dev | `jenkins/dev/Jenkinsfile-promotion` |
 | circle-guard-notification-dev | `jenkins/dev/Jenkinsfile-notification` |
 | circle-guard-gateway-dev | `jenkins/dev/Jenkinsfile-gateway` |
+| circle-guard-file-dev | `jenkins/dev/Jenkinsfile-file` |
+| circle-guard-dashboard-dev | `jenkins/dev/Jenkinsfile-dashboard` |
 
 ### 3.3 Pipeline Stage
 
@@ -139,7 +141,7 @@ Repetir el paso anterior para cada servicio. La unica diferencia es el **Script 
 
 ### Orden de ejecucion
 
-Ejecutar primero los 6 pipelines de **dev** (pueden correr en paralelo):
+Ejecutar primero los 8 pipelines de **dev** (pueden correr en paralelo):
 
 ```
 circle-guard-auth-dev
@@ -148,6 +150,8 @@ circle-guard-form-dev
 circle-guard-promotion-dev
 circle-guard-notification-dev
 circle-guard-gateway-dev
+circle-guard-file-dev
+circle-guard-dashboard-dev
 ```
 
 Una vez que todos terminen exitosamente, ejecutar:
