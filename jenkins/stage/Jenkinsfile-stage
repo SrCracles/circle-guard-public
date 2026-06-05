@@ -44,23 +44,15 @@ pipeline {
                 bat 'kubectl rollout status deployment -n infra --timeout=300s'
                 echo 'Ensuring stage namespace and base manifests exist...'
                 bat 'kubectl create namespace stage --dry-run=client -o yaml | kubectl apply -f -'
-                bat 'kubectl apply -k k8s/stage/'
-                echo 'Deploying services to Kind stage namespace...'
+                echo 'Configuring dynamic Kustomize images...'
                 script {
-                    def services = [
-                        'circleguard-auth-service',
-                        'circleguard-identity-service',
-                        'circleguard-form-service',
-                        'circleguard-promotion-service',
-                        'circleguard-notification-service',
-                        'circleguard-gateway-service',
-                        'circleguard-file-service',
-                        'circleguard-dashboard-service'
-                    ]
-                    for (svc in services) {
-                        bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:dev -n stage"
-                    }
+                    def kustomization = readFile('k8s/stage/kustomization.yaml')
+                    kustomization = kustomization.replaceAll('newName: srcracles/', "newName: ${env.DOCKER_USER}/")
+                    kustomization = kustomization.replaceAll('newTag: stage', 'newTag: dev')
+                    writeFile(file: 'k8s/stage/kustomization.yaml', text: kustomization)
                 }
+                echo 'Deploying services to Kind stage namespace...'
+                bat 'kubectl apply -k k8s/stage/'
                 bat 'kubectl rollout status deployment -n stage --timeout=300s'
             }
         }

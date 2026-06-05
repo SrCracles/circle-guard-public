@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: circleguard-form-service
-          image: srcracles/circleguard-form-service:dev
+          image: circleguard-form-service
           imagePullPolicy: Always
           ports:
             - containerPort: 8086

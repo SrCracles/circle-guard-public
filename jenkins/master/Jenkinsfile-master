@@ -45,22 +45,12 @@ pipeline {
         stage('Deploy to Kind Master') {
             steps {
                 echo 'Deploying full architecture to master namespace...'
-                bat 'kubectl apply -k k8s/master/'
                 script {
-                    def services = [
-                        'circleguard-auth-service',
-                        'circleguard-identity-service',
-                        'circleguard-form-service',
-                        'circleguard-promotion-service',
-                        'circleguard-notification-service',
-                        'circleguard-gateway-service',
-                        'circleguard-file-service',
-                        'circleguard-dashboard-service'
-                    ]
-                    for (svc in services) {
-                        bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:stage -n master"
-                    }
+                    def kustomization = readFile('k8s/master/kustomization.yaml')
+                    kustomization = kustomization.replaceAll('newName: srcracles/', "newName: ${env.DOCKER_USER}/")
+                    writeFile(file: 'k8s/master/kustomization.yaml', text: kustomization)
                 }
+                bat 'kubectl apply -k k8s/master/'
                 bat 'kubectl rollout status deployment -n master --timeout=300s'
             }
         }
@@ -114,14 +104,14 @@ ${others ?: "- No other changes in this release."}
 ---
 
 **Docker Images:**
-- srcracles/circleguard-auth-service:stage
-- srcracles/circleguard-identity-service:stage
-- srcracles/circleguard-form-service:stage
-- srcracles/circleguard-promotion-service:stage
-- srcracles/circleguard-notification-service:stage
-- srcracles/circleguard-gateway-service:stage
-- srcracles/circleguard-file-service:stage
-- srcracles/circleguard-dashboard-service:stage
+- ${env.DOCKER_USER}/circleguard-auth-service:stage
+- ${env.DOCKER_USER}/circleguard-identity-service:stage
+- ${env.DOCKER_USER}/circleguard-form-service:stage
+- ${env.DOCKER_USER}/circleguard-promotion-service:stage
+- ${env.DOCKER_USER}/circleguard-notification-service:stage
+- ${env.DOCKER_USER}/circleguard-gateway-service:stage
+- ${env.DOCKER_USER}/circleguard-file-service:stage
+- ${env.DOCKER_USER}/circleguard-dashboard-service:stage
 
 **Deployment Notes:**
 - Deployed to Kubernetes master namespace

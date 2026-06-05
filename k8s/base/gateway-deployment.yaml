@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: circleguard-gateway-service
-          image: srcracles/circleguard-gateway-service:dev
+          image: circleguard-gateway-service
           imagePullPolicy: Always
           ports:
             - containerPort: 8087

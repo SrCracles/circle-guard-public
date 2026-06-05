@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: circleguard-promotion-service
-          image: srcracles/circleguard-promotion-service:dev
+          image: circleguard-promotion-service
           imagePullPolicy: Always
           ports:
             - containerPort: 8088

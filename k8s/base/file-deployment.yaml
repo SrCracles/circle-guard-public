@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: circleguard-file-service
-          image: srcracles/circleguard-file-service:dev
+          image: circleguard-file-service
           imagePullPolicy: Always
           ports:
             - containerPort: 8085

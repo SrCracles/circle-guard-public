@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: circleguard-auth-service
-          image: srcracles/circleguard-auth-service:dev
+          image: circleguard-auth-service
           imagePullPolicy: Always
           ports:
             - containerPort: 8180

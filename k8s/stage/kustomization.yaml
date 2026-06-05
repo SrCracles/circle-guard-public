@@ -10,15 +10,27 @@ commonLabels:
   environment: stage
 
 images:
-  - name: srcracles/circleguard-auth-service
+  - name: circleguard-auth-service
+    newName: srcracles/circleguard-auth-service
     newTag: stage
-  - name: srcracles/circleguard-identity-service
+  - name: circleguard-identity-service
+    newName: srcracles/circleguard-identity-service
     newTag: stage
-  - name: srcracles/circleguard-form-service
+  - name: circleguard-form-service
+    newName: srcracles/circleguard-form-service
     newTag: stage
-  - name: srcracles/circleguard-promotion-service
+  - name: circleguard-promotion-service
+    newName: srcracles/circleguard-promotion-service
     newTag: stage
-  - name: srcracles/circleguard-notification-service
+  - name: circleguard-notification-service
+    newName: srcracles/circleguard-notification-service
     newTag: stage
-  - name: srcracles/circleguard-gateway-service
+  - name: circleguard-gateway-service
+    newName: srcracles/circleguard-gateway-service
+    newTag: stage
+  - name: circleguard-file-service
+    newName: srcracles/circleguard-file-service
+    newTag: stage
+  - name: circleguard-dashboard-service
+    newName: srcracles/circleguard-dashboard-service
     newTag: stage

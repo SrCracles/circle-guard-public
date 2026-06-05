@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: circleguard-dashboard-service
-          image: srcracles/circleguard-dashboard-service:dev
+          image: circleguard-dashboard-service
           imagePullPolicy: Always
           ports:
             - containerPort: 8084
