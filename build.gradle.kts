@@ -18,6 +18,7 @@ allprojects {
 subprojects {
     apply(plugin = "java")
     apply(plugin = "org.jetbrains.kotlin.jvm")
+    apply(plugin = "jacoco")
     extensions.configure<JavaPluginExtension> {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(21))
@@ -43,7 +44,26 @@ subprojects {
         }
     }
 
+    tasks.withType<JacocoReport> {
+        dependsOn(tasks.withType<Test>())
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+        }
+    }
+
+    tasks.withType<JacocoCoverageVerification> {
+        violationRules {
+            rule {
+                limit {
+                    minimum = "0.60".toBigDecimal()
+                }
+            }
+        }
+    }
+
     tasks.withType<Test> {
         useJUnitPlatform()
+        finalizedBy("jacocoTestReport", "jacocoTestCoverageVerification")
     }
 }

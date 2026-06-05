@@ -28,7 +28,7 @@ Desde la raiz del proyecto ejecutar:
 Este script crea:
 - El cluster de Kind
 - Los namespaces: `dev`, `stage`, `master`, `infra`
-- Los servicios de infraestructura: PostgreSQL, Kafka, Redis, Neo4j, Zookeeper, OpenLDAP
+- Los servicios de infraestructura: PostgreSQL, Kafka, Redis, Neo4j, Zookeeper, OpenLDAP, SonarQube
 - Exporta el kubeconfig a `kind-kubeconfig.yaml`
 
 Al finalizar, anotar la ruta del kubeconfig que muestra en pantalla.
@@ -101,6 +101,7 @@ Ir a **Manage Jenkins > Plugins > Available plugins** e instalar los que falten:
 | **Docker Pipeline** | No | Login y push a DockerHub: `withDockerRegistry(...)` | **Si, obligatorio** |
 | **HTML Publisher** | No | Ver el reporte HTML de Newman en Jenkins | No, opcional pero recomendado |
 | **JUnit** | Si (suggested plugins) | Publicar resultados de tests | Si, pero ya se tiene |
+| **Coverage** | No | Generar gráficos de tendencia de cobertura de pruebas en el dashboard | Si, para HU-23 |
 
 > **Nota:** No es necesario instalar `Kubernetes CLI`. Los pipelines usan `kubectl` directamente como comando del sistema, no usan los steps especiales de Kubernetes de Jenkins.
 
@@ -197,6 +198,9 @@ kubectl get pods -n infra
 
 # Ver logs de un servicio
 kubectl logs -n master -l app=circleguard-auth-service
+
+# Acceder a la interfaz de SonarQube (credenciales: admin/admin)
+kubectl port-forward -n infra svc/sonarqube 9000:9000
 ```
 
 ---

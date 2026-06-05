@@ -98,3 +98,13 @@ Las pruebas están configuradas utilizando `Locust` con base en el script de Pyt
 **Escenarios probados:**
 * **Performance Test (carga normal)**: ~20 usuarios concurrentes durante 60 segundos. Latencia promedio < 500ms, tasa de errores < 5%. **Importancia:** Valida comportamiento estable bajo carga representativa del dia a dia.
 * **Stress Test (carga extrema)**: ~50 usuarios concurrentes durante 60 segundos. **Importancia:** Identifica el limite del sistema antes de que falle; se utilizan valores conservadores para no saturar la PC local (entorno Kind).
+
+---
+
+## 5. Cobertura de Pruebas y Análisis Estático
+
+Para garantizar que el código se mantiene con un estándar alto de calidad con cada iteración, hemos integrado herramientas de análisis y cobertura en nuestros pipelines de Jenkins (HU-14 y HU-23):
+
+* **JaCoCo (Java Code Coverage)**: Configurado mediante un plugin en `build.gradle.kts`. Analiza la ejecución de las pruebas e instrumenta el código para generar métricas de cobertura. Hemos impuesto un límite de **60% de cobertura mínima de instrucciones**. Si la cobertura cae por debajo, el proceso de construcción fallará intencionalmente impidiendo que código sin testear llegue a etapas posteriores.
+* **SonarQube**: Se despliega en el namespace `infra` en nuestro clúster Kubernetes local. Después de correr las pruebas, Jenkins ejecuta `sonar-scanner-cli`, el cual recopila el reporte XML de JaCoCo y analiza el código en busca de code smells, vulnerabilidades y deuda técnica. Si las métricas no superan el **Quality Gate** de SonarQube, el pipeline falla.
+* **Tendencia en Jenkins**: El plugin de **Coverage** en Jenkins recibe el reporte generado para cada microservicio y dibuja el gráfico de tendencia en el dashboard del respectivo job, brindando visibilidad constante al equipo.
