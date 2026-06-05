@@ -32,7 +32,9 @@ pipeline {
                         'circleguard-form-service',
                         'circleguard-promotion-service',
                         'circleguard-notification-service',
-                        'circleguard-gateway-service'
+                        'circleguard-gateway-service',
+                        'circleguard-file-service',
+                        'circleguard-dashboard-service'
                     ]
                     for (svc in services) {
                         bat "docker pull ${DOCKER_USER}/${svc}:stage"
@@ -51,7 +53,9 @@ pipeline {
                         'circleguard-form-service',
                         'circleguard-promotion-service',
                         'circleguard-notification-service',
-                        'circleguard-gateway-service'
+                        'circleguard-gateway-service',
+                        'circleguard-file-service',
+                        'circleguard-dashboard-service'
                     ]
                     for (svc in services) {
                         bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:stage -n master"
@@ -116,6 +120,8 @@ ${others ?: "- No other changes in this release."}
 - srcracles/circleguard-promotion-service:stage
 - srcracles/circleguard-notification-service:stage
 - srcracles/circleguard-gateway-service:stage
+- srcracles/circleguard-file-service:stage
+- srcracles/circleguard-dashboard-service:stage
 
 **Deployment Notes:**
 - Deployed to Kubernetes master namespace

@@ -26,7 +26,9 @@ pipeline {
                         'circleguard-form-service',
                         'circleguard-promotion-service',
                         'circleguard-notification-service',
-                        'circleguard-gateway-service'
+                        'circleguard-gateway-service',
+                        'circleguard-file-service',
+                        'circleguard-dashboard-service'
                     ]
                     for (svc in services) {
                         bat "docker pull ${DOCKER_USER}/${svc}:dev"
@@ -51,7 +53,9 @@ pipeline {
                         'circleguard-form-service',
                         'circleguard-promotion-service',
                         'circleguard-notification-service',
-                        'circleguard-gateway-service'
+                        'circleguard-gateway-service',
+                        'circleguard-file-service',
+                        'circleguard-dashboard-service'
                     ]
                     for (svc in services) {
                         bat "kubectl set image deployment/${svc} ${svc}=${DOCKER_USER}/${svc}:dev -n stage"
@@ -170,7 +174,9 @@ ${stressStats}
                         'circleguard-form-service',
                         'circleguard-promotion-service',
                         'circleguard-notification-service',
-                        'circleguard-gateway-service'
+                        'circleguard-gateway-service',
+                        'circleguard-file-service',
+                        'circleguard-dashboard-service'
                     ]
                     for (svc in services) {
                         bat "docker tag ${DOCKER_USER}/${svc}:dev ${DOCKER_USER}/${svc}:stage"
@@ -201,7 +207,9 @@ ${stressStats}
                     'circleguard-form-service',
                     'circleguard-promotion-service',
                     'circleguard-notification-service',
-                    'circleguard-gateway-service'
+                    'circleguard-gateway-service',
+                    'circleguard-file-service',
+                    'circleguard-dashboard-service'
                 ]
                 for (svc in services) {
                     bat "docker rmi ${DOCKER_USER}/${svc}:dev 2>nul || exit 0"
