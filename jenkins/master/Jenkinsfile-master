@@ -32,40 +32,41 @@ pipeline {
                         bat(script: "@echo off\r\n${command}", returnStatus: true)
                     }
 
-                    def lastTag = "v1.0.0"
-
+                    def lastTag = ""
                     if (runBatStatus('git describe --tags --match "v*.*.*" --abbrev=0 >nul 2>nul') == 0) {
                         lastTag = runBatOutput('git describe --tags --match "v*.*.*" --abbrev=0')
                     }
 
-                    echo "Last tag detected: ${lastTag}"
-
-                    def commits = runBatOutput("git log ${lastTag}..HEAD --pretty=%%B")
-
-                    def version = lastTag.replace("v", "").tokenize('.')
-
-                    int major = version[0].toInteger()
-                    int minor = version[1].toInteger()
-                    int patch = version[2].toInteger()
-
-                    /*
-                    Versioning Strategy
-
-                    feat: -> MINOR
-                    everything else -> PATCH
-                    */
-
-                    if (commits =~ /(?m)^feat:/) {
-
-                        minor++
-                        patch = 0
-
+                    if (!lastTag) {
+                        echo "No semantic tags found. Starting fresh with v1.0.0"
+                        env.VERSION = "1.0.0"
                     } else {
+                        echo "Last semantic tag detected: ${lastTag}"
 
-                        patch++
+                        def commits = runBatOutput("git log ${lastTag}..HEAD --pretty=%%B")
+
+                        def version = lastTag.replace("v", "").tokenize('.')
+
+                        int major = version[0].toInteger()
+                        int minor = version[1].toInteger()
+                        int patch = version[2].toInteger()
+
+                        /*
+                        Versioning Strategy
+
+                        feat: -> MINOR
+                        everything else -> PATCH
+                        */
+
+                        if (commits =~ /(?m)^feat:/) {
+                            minor++
+                            patch = 0
+                        } else {
+                            patch++
+                        }
+
+                        env.VERSION = "${major}.${minor}.${patch}"
                     }
-
-                    env.VERSION = "${major}.${minor}.${patch}"
 
                     env.RELEASE_NOTES_FILE = "RELEASE_NOTES_v${env.VERSION}.md"
 
