@@ -8,6 +8,7 @@ resources:
   - openldap.yaml
   - postgresql.yaml
   - kafka.yaml
+  - sonarqube.yaml
 
 commonLabels:
   component: infrastructure
