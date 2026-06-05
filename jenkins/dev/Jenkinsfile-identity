@@ -15,12 +15,12 @@ pipeline {
         }
         stage('Test') {
             steps {
-                bat '.\\gradlew.bat :services:%SERVICE_NAME%:test'
+                bat '.\\gradlew.bat --no-daemon :services:%SERVICE_NAME%:test jacocoTestCoverageVerification'
             }
             post {
                 always {
                     junit testResults: "**/build/test-results/test/*.xml", allowEmptyResults: true
-                    recordCoverage tools: [[parser: 'JACOCO', pattern: '**/build/reports/jacoco/test/jacocoTestReport.xml']]
+                    recordCoverage tools: [[parser: 'JACOCO', pattern: '**/build/reports/jacoco/test/jacocoTestReport.xml']], sourceDirectories: [[path: "services/${SERVICE_NAME}/src/main/java"]]
                 }
             }
         }
@@ -31,7 +31,7 @@ pipeline {
         }
         stage('Build JAR') {
             steps {
-                bat '.\\gradlew.bat :services:%SERVICE_NAME%:bootJar'
+                bat '.\\gradlew.bat --no-daemon :services:%SERVICE_NAME%:bootJar'
             }
         }
         stage('Build Docker Image') {
