@@ -41,3 +41,14 @@ resilience4j.timelimiter:
   instances:
     identityService:
       timeoutDuration: 3s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always

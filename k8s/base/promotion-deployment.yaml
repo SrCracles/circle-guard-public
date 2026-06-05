@@ -32,3 +32,17 @@ spec:
               value: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard_promotion"
             - name: SPRING_KAFKA_CONSUMER_GROUP_ID
               value: "promotion-service-group"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8088
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8088
+            initialDelaySeconds: 120
+            periodSeconds: 15
+            failureThreshold: 3

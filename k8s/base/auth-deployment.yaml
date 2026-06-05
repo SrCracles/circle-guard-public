@@ -30,3 +30,17 @@ spec:
               value: "circleguard-auth-service"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard_auth"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8180
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8180
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            failureThreshold: 3

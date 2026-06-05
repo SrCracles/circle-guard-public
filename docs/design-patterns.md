@@ -462,6 +462,65 @@ FEATURE_TOGGLE_EMAIL_ENABLED: "true"
 
 ---
 
+## Patron 11: Health Checks (Readiness/Liveness Probes)
+
+**Descripcion:** Kubernetes sondea periodicamente el estado de cada Pod mediante dos tipos de probes HTTP configurados en cada Deployment. El `readinessProbe` determina si el contenedor esta listo para recibir trafico (si falla, Kubernetes lo elimina del balanceo de carga). El `livenessProbe` determina si el proceso principal sigue vivo (si falla, Kubernetes reinicia el Pod automaticamente).
+
+**Servicio / Componente:** Todos los Deployments en `k8s/base/` — `readinessProbe` y `livenessProbe` apuntando al endpoint `/actuator/health/readiness` y `/actuator/health/liveness` de Spring Boot Actuator.
+
+**Problema que resuelve:** Sin probes, Kubernetes envia trafico a Pods que todavia estan arrancando o cuyo proceso interno ha muerto (deadlock, OOM), lo que genera errores 502/503 para los usuarios. Con las probes configuradas, Kubernetes detecta estos estados de forma automatica y toma accion correctiva sin intervencion humana.
+
+**Evidencia — Kubernetes Deployment:**
+
+```yaml
+# k8s/base/promotion-deployment.yaml (servicio mas complejo: PostgreSQL + Neo4j + Kafka + Redis)
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8088
+  initialDelaySeconds: 90   # Tiempo de arranque de Neo4j + Kafka
+  periodSeconds: 10
+  failureThreshold: 5
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8088
+  initialDelaySeconds: 120  # Mas holgura para liveness
+  periodSeconds: 15
+  failureThreshold: 3
+```
+
+**Evidencia — Spring Boot Actuator:**
+
+```yaml
+# application.yml (todos los servicios)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+```
+
+**Tiempos configurados por servicio:**
+
+| Servicio | Puerto | `initialDelaySeconds` (readiness) | Razon |
+|---------|--------|-----------------------------------|-------|
+| `gateway-service` | 8087 | 40s | Solo Redis |
+| `file-service` | 8085 | 30s | Sin dependencias externas |
+| `identity-service` | 8083 | 50s | PostgreSQL |
+| `notification-service` | 8082 | 50s | Kafka + Mail |
+| `dashboard-service` | 8084 | 50s | PostgreSQL |
+| `auth-service` | 8180 | 60s | PostgreSQL + LDAP + Resilience4j |
+| `form-service` | 8086 | 60s | PostgreSQL + Kafka |
+| `promotion-service` | 8088 | 90s | PostgreSQL + Neo4j + Kafka + Redis |
+
+---
+
 ## Resumen de Patrones
 
 | # | Patron | Categoria | Servicio Principal |
@@ -476,3 +535,4 @@ FEATURE_TOGGLE_EMAIL_ENABLED: "true"
 | 8 | Scheduled Task | Operacional | `circleguard-promotion-service` |
 | 9 | Circuit Breaker | Resiliencia | `circleguard-auth-service` |
 | 10 | Feature Toggle | Operacional | `circleguard-notification-service` |
+| 11 | Health Checks / Probes | Operacional | Todos los microservicios (K8s) |

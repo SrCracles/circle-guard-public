@@ -30,3 +30,17 @@ spec:
               value: "circleguard-form-service"
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard_form"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8086
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8086
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            failureThreshold: 3

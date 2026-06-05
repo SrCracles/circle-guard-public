@@ -28,3 +28,17 @@ spec:
           env:
             - name: SPRING_APPLICATION_NAME
               value: "circleguard-file-service"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8085
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8085
+            initialDelaySeconds: 50
+            periodSeconds: 15
+            failureThreshold: 3
