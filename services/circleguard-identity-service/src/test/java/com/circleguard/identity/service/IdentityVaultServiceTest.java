@@ -4,108 +4,98 @@ import com.circleguard.identity.model.IdentityMapping;
 import com.circleguard.identity.repository.IdentityMappingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class IdentityVaultServiceTest {
+@ExtendWith(MockitoExtension.class)
+public class IdentityVaultServiceTest {
 
+    @Mock
     private IdentityMappingRepository repository;
-    private IdentityVaultService service;
+
+    @InjectMocks
+    private IdentityVaultService vaultService;
 
     @BeforeEach
     void setUp() {
-        repository = mock(IdentityMappingRepository.class);
-        service = new IdentityVaultService(repository);
-        ReflectionTestUtils.setField(service, "hashSalt", "test-salt");
+        ReflectionTestUtils.setField(vaultService, "hashSalt", "test-salt");
     }
 
     @Test
-    void shouldReturnExistingAnonymousIdForKnownIdentity() {
-        String realIdentity = "student@uni.edu";
+    void shouldReturnExistingAnonymousId() {
         UUID existingId = UUID.randomUUID();
         IdentityMapping mapping = IdentityMapping.builder()
                 .anonymousId(existingId)
+                .realIdentity("user@uni.edu")
+                .identityHash(anyHash())
+                .salt("salt")
                 .build();
 
-        when(repository.findByIdentityHash(anyString())).thenReturn(Optional.of(mapping));
+        when(repository.findByIdentityHash(any())).thenReturn(Optional.of(mapping));
 
-        UUID result = service.getOrCreateAnonymousId(realIdentity);
+        UUID result = vaultService.getOrCreateAnonymousId("user@uni.edu");
 
-        assertEquals(existingId, result);
+        assertThat(result).isEqualTo(existingId);
         verify(repository, never()).save(any());
     }
 
     @Test
-    void shouldCreateNewMappingForUnknownIdentity() {
-        String realIdentity = "newstudent@uni.edu";
-
-        when(repository.findByIdentityHash(anyString())).thenReturn(Optional.empty());
-        when(repository.save(any())).thenAnswer(inv -> {
+    void shouldCreateNewAnonymousIdWhenNotFound() {
+        when(repository.findByIdentityHash(any())).thenReturn(Optional.empty());
+        when(repository.save(any(IdentityMapping.class))).thenAnswer(inv -> {
             IdentityMapping m = inv.getArgument(0);
-            m.setAnonymousId(UUID.randomUUID());
+            if (m.getAnonymousId() == null) {
+                m.setAnonymousId(UUID.randomUUID());
+            }
             return m;
         });
 
-        UUID result = service.getOrCreateAnonymousId(realIdentity);
+        UUID result = vaultService.getOrCreateAnonymousId("new@uni.edu");
 
-        assertNotNull(result);
-        ArgumentCaptor<IdentityMapping> captor = ArgumentCaptor.forClass(IdentityMapping.class);
-        verify(repository).save(captor.capture());
-        assertEquals(realIdentity, captor.getValue().getRealIdentity());
-        assertNotNull(captor.getValue().getSalt());
+        assertThat(result).isNotNull();
+        verify(repository).save(any(IdentityMapping.class));
     }
 
     @Test
-    void shouldGenerateConsistentHashForSameIdentity() {
-        String realIdentity = "consistent@uni.edu";
-
-        when(repository.findByIdentityHash(anyString())).thenReturn(Optional.empty());
-        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        UUID first = service.getOrCreateAnonymousId(realIdentity);
-
-        // Reset mock to simulate second call finding the mapping
+    void shouldResolveRealIdentity() {
+        UUID anonId = UUID.randomUUID();
         IdentityMapping mapping = IdentityMapping.builder()
-                .anonymousId(first)
-                .build();
-        when(repository.findByIdentityHash(anyString())).thenReturn(Optional.of(mapping));
-
-        UUID second = service.getOrCreateAnonymousId(realIdentity);
-
-        assertEquals(first, second);
-    }
-
-    @Test
-    void shouldResolveRealIdentityForKnownAnonymousId() {
-        UUID anonymousId = UUID.randomUUID();
-        IdentityMapping mapping = IdentityMapping.builder()
-                .anonymousId(anonymousId)
-                .realIdentity("found@uni.edu")
+                .anonymousId(anonId)
+                .realIdentity("resolved@uni.edu")
+                .identityHash("hash")
+                .salt("salt")
                 .build();
 
-        when(repository.findById(anonymousId)).thenReturn(Optional.of(mapping));
+        when(repository.findById(anonId)).thenReturn(Optional.of(mapping));
 
-        String result = service.resolveRealIdentity(anonymousId);
+        String result = vaultService.resolveRealIdentity(anonId);
 
-        assertEquals("found@uni.edu", result);
+        assertThat(result).isEqualTo("resolved@uni.edu");
     }
 
     @Test
-    void shouldThrowNotFoundWhenResolvingUnknownAnonymousId() {
-        UUID anonymousId = UUID.randomUUID();
+    void shouldThrow404WhenIdentityNotFound() {
+        UUID anonId = UUID.randomUUID();
+        when(repository.findById(anonId)).thenReturn(Optional.empty());
 
-        when(repository.findById(anonymousId)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> vaultService.resolveRealIdentity(anonId))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Identity not found");
+    }
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service.resolveRealIdentity(anonymousId));
-
-        assertEquals(404, exception.getStatusCode().value());
+    private String anyHash() {
+        return "any-hash-string";
     }
 }

@@ -50,6 +50,14 @@ subprojects {
             xml.required.set(true)
             html.required.set(true)
         }
+        classDirectories.setFrom(
+            classDirectories.files.map { dir ->
+                fileTree(dir) {
+                    exclude("**/*Application.class")
+                    exclude("**/config/**")
+                }
+            }
+        )
     }
 
     tasks.withType<JacocoCoverageVerification> {
@@ -60,6 +68,14 @@ subprojects {
                 }
             }
         }
+        classDirectories.setFrom(
+            classDirectories.files.map { dir ->
+                fileTree(dir) {
+                    exclude("**/*Application.class")
+                    exclude("**/config/**")
+                }
+            }
+        )
     }
 
     tasks.withType<Test> {

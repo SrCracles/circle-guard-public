@@ -5,11 +5,13 @@ import com.circleguard.form.service.QuestionnaireService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(QuestionnaireController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class QuestionnaireControllerTest {
 
     @Autowired
@@ -25,6 +28,22 @@ class QuestionnaireControllerTest {
 
     @MockBean
     private QuestionnaireService questionnaireService;
+
+    @Test
+    void shouldReturnAllQuestionnaires() throws Exception {
+        Questionnaire q = Questionnaire.builder()
+                .id(UUID.randomUUID())
+                .title("Q1")
+                .version(1)
+                .isActive(true)
+                .build();
+
+        Mockito.when(questionnaireService.getAllQuestionnaires()).thenReturn(List.of(q));
+
+        mockMvc.perform(get("/api/v1/questionnaires"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Q1"));
+    }
 
     @Test
     void shouldReturnActiveQuestionnaire() throws Exception {
@@ -44,6 +63,14 @@ class QuestionnaireControllerTest {
     }
 
     @Test
+    void shouldReturn404WhenNoActiveQuestionnaire() throws Exception {
+        Mockito.when(questionnaireService.getActiveQuestionnaire()).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/questionnaires/active"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void shouldCreateQuestionnaire() throws Exception {
         UUID id = UUID.randomUUID();
         Questionnaire q = Questionnaire.builder()
@@ -59,5 +86,15 @@ class QuestionnaireControllerTest {
                 .content("{\"title\": \"New Survey\", \"version\": 1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("New Survey"));
+    }
+
+    @Test
+    void shouldActivateQuestionnaire() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        Mockito.doNothing().when(questionnaireService).activateQuestionnaire(id);
+
+        mockMvc.perform(post("/api/v1/questionnaires/{id}/activate", id))
+                .andExpect(status().isOk());
     }
 }

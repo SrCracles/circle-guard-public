@@ -4,60 +4,45 @@ import com.circleguard.identity.model.IdentityMapping;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
-import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-@ActiveProfiles("test")
-@Transactional
-class IdentityMappingRepositoryTest {
+public class IdentityMappingRepositoryTest {
 
     @Autowired
     private IdentityMappingRepository repository;
 
     @Test
-    void shouldSaveAndRetrieveWithAutomaticEncryption() {
+    void shouldSaveAndFindByIdentityHash() {
         IdentityMapping mapping = IdentityMapping.builder()
-                .realIdentity("test-user")
-                .anonymousId(UUID.randomUUID())
+                .realIdentity("user@uni.edu")
                 .identityHash("hash123")
                 .salt("salt123")
                 .build();
-        
+
         IdentityMapping saved = repository.save(mapping);
-        assertNotNull(saved);
-        assertNotNull(saved.getAnonymousId());
-        
-        // Clear persistence context to force fetch from DB
-        repository.flush();
-        
-        IdentityMapping found = repository.findById(saved.getAnonymousId()).orElseThrow();
-        assertEquals("test-user", found.getRealIdentity());
+        Optional<IdentityMapping> found = repository.findByIdentityHash("hash123");
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getRealIdentity()).isEqualTo("user@uni.edu");
+        assertThat(found.get().getAnonymousId()).isEqualTo(saved.getAnonymousId());
     }
 
     @Test
-    void shouldFindMappingByIdentityHash() {
-        String realIdentity = "user@example.com";
-        String hash = "hash123";
-        String salt = "salt456";
-        
+    void shouldFindById() {
         IdentityMapping mapping = IdentityMapping.builder()
-                .realIdentity(realIdentity)
-                .anonymousId(UUID.randomUUID())
-                .identityHash(hash)
-                .salt(salt)
+                .realIdentity("guest@uni.edu")
+                .identityHash("hash456")
+                .salt("salt456")
                 .build();
+
         IdentityMapping saved = repository.save(mapping);
-        repository.flush();
-        
-        assertNotNull(saved.getAnonymousId());
-        Optional<IdentityMapping> found = repository.findByIdentityHash(hash);
-        assertTrue(found.isPresent());
-        assertEquals(realIdentity, found.get().getRealIdentity());
+        Optional<IdentityMapping> found = repository.findById(saved.getAnonymousId());
+
+        assertThat(found).isPresent();
+        assertThat(found.get().getIdentityHash()).isEqualTo("hash456");
     }
 }

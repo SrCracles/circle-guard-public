@@ -11,18 +11,34 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 * **`DualChainAuthenticationProviderTest`**: Login fallback LDAP vs local. **Importancia:** La autenticacion dual es un requisito funcional critico. Si el fallback falla, usuarios invitados o cuentas locales quedarian bloqueadas.
 * **`LoginControllerTest`**: Probar controlador de login de forma unitaria.
 * **`IdentityClientTest`**: Validación del comportamiento de fallback (Circuit Breaker) en caso de fallo del `identity-service`. **Importancia:** Asegura la resiliencia del proceso de login evitando bloqueos en cascada o caídas (errores 500) cuando el servicio dependiente está inaccesible o saturado.
+* **`UserControllerTest`**: Operaciones CRUD de gestión de usuarios vía MockMvc. **Importancia:** Valida que solo usuarios con rol ADMIN puedan crear o eliminar cuentas, previniendo escalación de privilegios.
+* **`QrTokenControllerTest`**: Generación y revocación de tokens QR de forma unitaria (MockitoExtension). **Importancia:** Garantiza que los tokens de acceso al campus tengan TTL correcto y que la revocación inmediata funcione ante reportes de salud.
+* **`QrTokenServiceTest`**: Lógica de creación, validación y expiración de tokens QR. **Importancia:** Evita que tokens expirados o revocados permitan el acceso físico al campus.
+* **`CustomUserDetailsServiceTest`**: Carga de detalles de usuario desde PostgreSQL. **Importancia:** Asegura que Spring Security reciba roles y credenciales correctas para la evaluación de `@PreAuthorize`.
+* **`AuthModelsTest`**: Cobertura exhaustiva de getters, setters, builders, equals, hashCode y toString en modelos Lombok (`User`, `Role`, etc.). **Importancia:** Detecta regressiones en la generación de código de Lombok que podrían afectar la serialización JSON o la comparación de entidades.
+* **`JwtAuthenticationFilterTest`**: Extracción y validación del token JWT desde el header `Authorization`. **Importancia:** Prueba la primera línea de defensa de cada request HTTP; un fallo aquí podría dejar endpoints desprotegidos.
 
 ### `circleguard-identity-service`
 * **`IdentityEncryptionConverterTest`**: Encriptacion/desencriptacion de IDs. **Importancia:** FERPA y la privacidad del estudiante dependen de que las identidades reales nunca se expongan. Garantiza que los datos en reposo sean irreversibles sin la clave.
 * **`IdentityVaultServiceTest`**: Generacion de IDs anonimizados unicos y hash SHA-256. **Importancia:** La integridad del sistema depende de que cada identidad real genere exactamente un unico ID anonimo determinista. Un fallo aquí rompería el trazado de contactos.
 * **`IdentityMappingRepositoryTest`**: Testeo unitario del repositorio de persistencia.
-* **`IdentityVaultControllerTest`**: Controladores REST de gestión de identidades.
+* **`IdentityVaultControllerTest`**: Controladores REST de gestión de identidades (POST, GET by ID, POST /visit, GET /map). **Importancia:** Valida el correcto mapeo entre identidades reales y anónimas, incluyendo el endpoint de visitas que actualiza métricas de auditoría.
+* **`JwtAuthenticationFilterTest`**: Extracción del token Bearer y validación de firma. **Importancia:** Asegura que el filtro de seguridad del `identity-service` rechace tokens malformados o ausentes antes de llegar a los controllers.
+* **`IdentityModelsTest`**: Cobertura exhaustiva de getters, setters, builders, equals y hashCode en `IdentityMapping` y `IdentityAccessEvent` (incluyendo `IdentityAccessPayload` e `IdentityAccessMetadata`). **Importancia:** Los eventos de acceso a identidades son auditados; cualquier cambio en la estructura de datos podría romper la trazabilidad de quién consultó identidades reales.
 
 ### `circleguard-form-service`
-* **`SymptomMapperTest`**: Mapeo correcto de sintomas a niveles de riesgo. **Importancia:** Este componente decide si un usuario debe ser marcado como sospechoso basado en sus respuestas. Afecta directamente la metrica de "False Positive Rate < 15%".
+* **`SymptomMapperTest`**: Mapeo correcto de sintomas a niveles de riesgo (expandido con validación de lista vacía y casos de no coincidencia). **Importancia:** Este componente decide si un usuario debe ser marcado como sospechoso basado en sus respuestas. Afecta directamente la metrica de "False Positive Rate < 15%".
 * **`HealthSurveyControllerTest`**: Probar endpoints de envío de encuestas médicas.
 * **`AttachmentControllerTest`**: Validar adjuntos de encuestas.
-* **`QuestionnaireControllerTest`**: Operaciones CRUD y listado de cuestionarios.
+* **`QuestionnaireControllerTest`**: Operaciones CRUD, listado de cuestionarios y obtención de cuestionario activo. **Importancia:** Garantiza que los estudiantes siempre reciban el cuestionario correcto y vigente.
+* **`CertificateValidationControllerTest`**: Endpoints de validación de certificados médicos (listado de pendientes y validación con estados APPROVED/REJECTED). **Importancia:** La validación manual por parte del personal de salud es un paso crítico antes de permitir el acceso al campus.
+* **`QuestionnaireServiceTest`**: Lógica de creación de cuestionarios con preguntas asociadas. **Importancia:** Valida la persistencia transaccional correcta de cuestionarios complejos con múltiples preguntas.
+* **`HealthSurveyServiceTest`**: Lógica de guardado de encuestas de salud. **Importancia:** Cada encuesta enviada puede disparar alertas de salud; un error de persistencia podría ocultar un caso sospechoso.
+* **`FormModelsTest`**: Cobertura exhaustiva de modelos `HealthSurvey`, `Questionnaire`, `Question` y enums `ValidationStatus` / `QuestionType`. **Importancia:** Las encuestas de salud se serializan a JSON y se persisten en campos JSONB; la integridad del modelo afecta la capacidad de consulta posterior.
+* **`StorageServiceTest`**: Almacenamiento de archivos adjuntos en disco (incluyendo eliminación). **Importancia:** Los certificados médicos adjuntos son evidencia legal; su pérdida o sobreescritura comprometería auditorías.
+* **`FormRepositoryTest`**: Pruebas de repositorio JPA con H2 (`QuestionnaireRepository` y `HealthSurveyRepository`). **Importancia:** Asegura que las consultas derivadas por nombre funcionen correctamente en la base de datos real.
+* **`FormApplicationTest`**: Contexto de Spring Boot levantando correctamente. **Importancia:** Valida que no existan beans faltantes o conflictos de dependencias en el arranque del servicio.
+* **`FormIntegrationTest`**: End-to-end de controladores con MockMvc y base de datos H2 real. **Importancia:** Verifica que la cadena completa controller -> service -> repository funcione sin errores de mapeo o transacción.
 
 ### `circleguard-promotion-service`
 * **`StatusLifecycleTest`**: Transiciones de estado validas (ACTIVE->SUSPECT->PROBABLE->CONFIRMED). **Importancia:** La maquina de estados de salud es el nucleo del negocio. La contencion rapida (< 60 segundos) depende de transiciones automaticas correctas.
@@ -33,6 +49,8 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 * **`FloorServiceTest`**: Lógica para validar pisos o ubicaciones físicas.
 * **`SurveyListenerTest`**: Recepción de encuestas.
 * **`HealthStatusControllerTest`**: Controlador REST de estados.
+* **`PromotionModelsTest`**: Cobertura exhaustiva de DTOs (`BuildingDTO`, `AccessPointDTO`, `FloorDTO`) y modelos (`Building`, `AccessPoint`, `Floor`, `SystemSettings`) y modelos de grafo (`CircleNode`, `UserNode`, `EncounterRelationship`). **Importancia:** Los DTOs son el contrato de API entre `promotion-service` y otros servicios; un cambio inadvertido rompería la integración. Los modelos de grafo afectan directamente las queries Cypher.
+* **`PromotionControllersTest`**: Controladores REST de infraestructura física (`BuildingController`, `AccessPointController`, `FloorController`), señalización (`LocationSignalController`) y sesiones (`SessionHandshakeController`). **Importancia:** Valida la gestión de edificios, pisos y puntos de acceso WiFi, así como la recepción de señales de ubicación que alimentan el trazado de contactos.
 
 ### `circleguard-notification-service`
 * **`TemplateServiceTest`**: Renderizado de templates Freemarker con variables. **Importancia:** Probar el renderizado garantiza que los usuarios reciban mensajes con su estado correcto y enlaces funcionales, evitando confusion en momentos criticos de salud.
@@ -43,6 +61,10 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 * **`NotificationRetryTest`**: Lógica de reintentos ante caídas o fallos.
 * **`LmsServiceTest`**: Interacción con el LMS (Blackboard/Moodle) del campus.
 * **`RoomReservationServiceTest`**: Funcionalidad de cancelación o gestión de reservas.
+* **`SmsServiceImplTest`**: Envío de SMS vía integración externa y manejo de errores. **Importancia:** En caso de brotes, el SMS es el canal más rápido para alertar a la comunidad estudiantil.
+* **`PushServiceImplTest`**: Envío de notificaciones push y gestión de tokens de dispositivo. **Importancia:** Asegura que las notificaciones urgentes lleguen a las aplicaciones móviles instaladas.
+* **`CircleFencedListenerTest`**: Listener de Kafka que procesa eventos de cercado de círculos (cuarentena de grupo). **Importancia:** La contención rápida de brotes depende de que las notificaciones de cercado se generen y envíen sin demora.
+* **`AuditLogServiceTest`**: Registro de auditoría de notificaciones enviadas. **Importancia:** Permite trazar qué usuario fue notificado, cuándo y por qué canal, cumpliendo con requisitos de trazabilidad.
 
 ### `circleguard-gateway-service`
 * **`QrValidationServiceTest`** y **`QrValidationServiceAdditionalTest`**: Validacion de tokens expirados/firmados incorrectamente. **Importancia:** Si un token invalido o manipulado pasara la validacion, personas con riesgo sanitario podrian ingresar al campus, violando la seguridad biologica.
@@ -55,6 +77,7 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 ### `circleguard-dashboard-service`
 * **`KAnonymityFilterTest`**: Valida que las métricas sensibles y agrupaciones de pocos usuarios (K < 5) se camuflen correctamente. **Importancia:** Evita la re-identificación de estudiantes en reportes públicos o administrativos.
 * **`AnalyticsServiceTest`**: Prueba el aglomerado de las estadísticas sin depender de las bases de datos.
+* **`PromotionClientTest`**: Cliente Feign hacia `promotion-service` con fallback por Circuit Breaker. **Importancia:** El dashboard depende de datos agregados de salud; si el servicio de promoción falla, el dashboard debe mostrar datos en caché o un estado degradado sin caerse.
 
 ---
 
@@ -69,6 +92,8 @@ Estas pruebas validan la correcta comunicación entre dos o más componentes rea
 * **`PromotionNeo4jTracingTest`** (`promotion-service` -> `Neo4j`): `detectAndFormCircles` ejecuta query Cypher con filtros de distancia y tiempo. **Importancia:** El rastreo de contactos es el nucleo del sistema; un error aquí invalidaria todo el modelo de contencion.
 * **`FileUploadControllerIntegrationTest`** (`file-service`): Prueba a nivel de contenedor Web MVC del envío Multipart de archivos.
 * **`AnalyticsControllerTest`** (`dashboard-service`): Test de integración MockMvc.
+* **`IdentityIntegrationTest`** (`identity-service`): Flujo completo de creación y consulta de identidades anónimas con base de datos H2 real. **Importancia:** Valida que el hashing SHA-256 y la encriptación AES funcionen correctamente en un contexto de persistencia real.
+* **`FormIntegrationTest`** (`form-service`): Flujo completo de creación de cuestionarios y envío de encuestas de salud con MockMvc y H2. **Importancia:** Asegura que los cuestionarios dinámicos se persistan correctamente y que las encuestas generen los eventos de salud esperados.
 
 > **Configuracion de Tests**: Se configuro **H2 en memoria** para los tests de `form-service` y otros que usen repositorios, permitiendo ejecutar las pruebas de integracion sin depender de PostgreSQL real durante las fases de build y dev. Las dependencias externas como Kafka, Redis y Neo4j se simulan mediante **mocks** (Mockito), sin levantar contenedores reales.
 
