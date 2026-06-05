@@ -111,16 +111,18 @@ LOCUST_PERF_FILE=tests/locustfile-performance.py
 LOCUST_STRESS_FILE=tests/locustfile-stress.py
 ```
 
-El `Jenkinsfile-stage` las carga al inicio con `readProperties`:
+El `Jenkinsfile-stage` las carga al inicio leyendo el archivo con `readFile` y cargándolo en un objeto `Properties` de Java/Groovy para evitar dependencias de plugins externos:
 
 ```groovy
 stage('Checkout') {
     steps {
         checkout scm
         script {
-            def props = readProperties file: 'jenkins/jenkins.properties'
-            env.NEWMAN_COLLECTION = props.NEWMAN_COLLECTION
-            env.NEWMAN_ENVIRONMENT = props.NEWMAN_ENVIRONMENT
+            def props = new Properties()
+            def propsFileContent = readFile('jenkins/jenkins.properties')
+            props.load(new StringReader(propsFileContent))
+            env.NEWMAN_COLLECTION = props.getProperty('NEWMAN_COLLECTION')
+            env.NEWMAN_ENVIRONMENT = props.getProperty('NEWMAN_ENVIRONMENT')
         }
     }
 }
