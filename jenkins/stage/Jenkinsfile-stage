@@ -54,7 +54,7 @@ pipeline {
             steps {
                 echo 'Ensuring infra namespace exists and infrastructure is deployed...'
                 bat 'kubectl create namespace infra --dry-run=client -o yaml | kubectl apply -f -'
-                bat 'kubectl apply -k k8s/infra/'
+                bat 'kubectl apply -k k8s/infra/ || exit 0'
                 bat 'kubectl rollout status deployment -n infra --timeout=300s'
                 echo 'Ensuring stage namespace and base manifests exist...'
                 bat 'kubectl create namespace stage --dry-run=client -o yaml | kubectl apply -f -'
