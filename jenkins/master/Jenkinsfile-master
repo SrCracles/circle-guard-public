@@ -1,31 +1,96 @@
 pipeline {
     agent any
+
     environment {
         DOCKER_USER = "${env.CG_DOCKER_USER ?: 'srcracles'}"
         DOCKERHUB_CREDENTIALS_ID = "${env.CG_DOCKERHUB_CREDENTIALS_ID ?: 'dockerhub-credentials'}"
+
         GITHUB_TOKEN_ID = "${env.CG_GITHUB_TOKEN_ID ?: 'github-token'}"
         GITHUB_OWNER = "${env.CG_GITHUB_OWNER ?: 'SrCracles'}"
         GITHUB_REPO = "${env.CG_GITHUB_REPO ?: 'circle-guard-public'}"
-        VERSION = "${env.BUILD_NUMBER}"
-        RELEASE_NOTES_FILE = "RELEASE_NOTES_v${env.BUILD_NUMBER}.md"
     }
+
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
+                bat 'git fetch --tags'
             }
         }
+
+        stage('Calculate Semantic Version') {
+            steps {
+
+                script {
+
+                    def runBatOutput = { command ->
+                        bat(script: "@echo off\r\n${command}", returnStdout: true).trim()
+                    }
+
+                    def runBatStatus = { command ->
+                        bat(script: "@echo off\r\n${command}", returnStatus: true)
+                    }
+
+                    def lastTag = "v0.0.0"
+
+                    if (runBatStatus('git describe --tags --abbrev=0 >nul 2>nul') == 0) {
+                        lastTag = runBatOutput('git describe --tags --abbrev=0')
+                    }
+
+                    echo "Last tag detected: ${lastTag}"
+
+                    def commits = runBatOutput("git log ${lastTag}..HEAD --pretty=%B")
+
+                    def version = lastTag.replace("v", "").tokenize('.')
+
+                    int major = version[0].toInteger()
+                    int minor = version[1].toInteger()
+                    int patch = version[2].toInteger()
+
+                    /*
+                    Versioning Strategy
+
+                    feat: -> MINOR
+                    everything else -> PATCH
+                    */
+
+                    if (commits =~ /(?m)^feat:/) {
+
+                        minor++
+                        patch = 0
+
+                    } else {
+
+                        patch++
+                    }
+
+                    env.VERSION = "${major}.${minor}.${patch}"
+
+                    env.RELEASE_NOTES_FILE = "RELEASE_NOTES_v${env.VERSION}.md"
+
+                    echo "Calculated semantic version: v${env.VERSION}"
+                }
+            }
+        }
+
         stage('Teardown Master Environment') {
             steps {
+
                 echo 'Stopping existing deployments in master namespace...'
+
                 bat 'kubectl delete deployment --all -n master --ignore-not-found=true'
                 bat 'kubectl delete svc --all -n master --ignore-not-found=true'
+
                 bat 'ping 127.0.0.1 -n 4 > nul'
             }
         }
-        stage('Pull stage images from DockerHub') {
+
+        stage('Pull Stage Images From DockerHub') {
             steps {
+
                 script {
+
                     def services = [
                         'circleguard-auth-service',
                         'circleguard-identity-service',
@@ -36,137 +101,312 @@ pipeline {
                         'circleguard-file-service',
                         'circleguard-dashboard-service'
                     ]
+
                     for (svc in services) {
-                        bat "docker pull ${DOCKER_USER}/${svc}:stage"
+
+                        echo "Pulling ${svc}:stage"
+
+                        bat """
+                        docker pull ${DOCKER_USER}/${svc}:stage
+                        """
                     }
                 }
             }
         }
-        stage('Deploy to Kind Master') {
+
+        stage('Promote Docker Images') {
             steps {
-                echo 'Deploying full architecture to master namespace...'
+
                 script {
-                    def kustomization = readFile('k8s/master/kustomization.yaml')
-                    kustomization = kustomization.replaceAll('newName: srcracles/', "newName: ${env.DOCKER_USER}/")
-                    writeFile(file: 'k8s/master/kustomization.yaml', text: kustomization)
+
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service',
+                        'circleguard-file-service',
+                        'circleguard-dashboard-service'
+                    ]
+
+                    withCredentials([usernamePassword(
+                        credentialsId: env.DOCKERHUB_CREDENTIALS_ID,
+                        usernameVariable: 'DOCKER_USER_VAR',
+                        passwordVariable: 'DOCKER_PASS'
+                    )]) {
+
+                        bat '''
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER_VAR% --password-stdin
+                        '''
+
+                        for (svc in services) {
+
+                            echo "Promoting ${svc}:stage -> v${env.VERSION} + master"
+
+                            /*
+                            Immutable release tag
+                            */
+
+                            bat """
+                            docker tag ${DOCKER_USER}/${svc}:stage ${DOCKER_USER}/${svc}:v${env.VERSION}
+                            """
+
+                            /*
+                            Mutable production tag
+                            */
+
+                            bat """
+                            docker tag ${DOCKER_USER}/${svc}:stage ${DOCKER_USER}/${svc}:master
+                            """
+
+                            /*
+                            Push immutable version
+                            */
+
+                            bat """
+                            docker push ${DOCKER_USER}/${svc}:v${env.VERSION}
+                            """
+
+                            /*
+                            Push mutable production alias
+                            */
+
+                            bat """
+                            docker push ${DOCKER_USER}/${svc}:master
+                            """
+                        }
+                    }
                 }
+            }
+        }
+
+        stage('Deploy To Kind Master') {
+            steps {
+
+                echo 'Deploying full architecture to master namespace...'
+
+                script {
+
+                    def kustomization = readFile('k8s/master/kustomization.yaml')
+
+                    /*
+                    Replace DockerHub user dynamically
+                    */
+
+                    kustomization = kustomization.replaceAll(
+                        'newName: srcracles/',
+                        "newName: ${env.DOCKER_USER}/"
+                    )
+
+                    /*
+                    Replace image tags with immutable release version
+                    */
+
+                    kustomization = kustomization.replaceAll(
+                        'newTag: stage',
+                        "newTag: v${env.VERSION}"
+                    )
+
+                    writeFile(
+                        file: 'k8s/master/kustomization.yaml',
+                        text: kustomization
+                    )
+                }
+
                 bat 'kubectl apply -k k8s/master/'
+
                 bat 'kubectl rollout status deployment -n master --timeout=300s'
             }
         }
+
         stage('Generate Release Notes') {
             steps {
+
                 script {
+
                     def runBatOutput = { command ->
                         bat(script: "@echo off\r\n${command}", returnStdout: true).trim()
                     }
 
-                    def runBatStatus = { command ->
-                        bat(script: "@echo off\r\n${command}", returnStatus: true)
-                    }
-
                     def lastTag = ""
-                    def hasPreviousTag = runBatStatus('git describe --tags --abbrev=0 >nul 2>nul') == 0
-                    if (hasPreviousTag) {
+
+                    try {
                         lastTag = runBatOutput('git describe --tags --abbrev=0')
-                    }
+                    } catch(Exception ignored) {}
 
                     def releaseRange = lastTag ? "${lastTag}..HEAD" : ""
                     def releaseRangePrefix = releaseRange ? "${releaseRange} " : ""
 
-                    def features = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^feat\\|^feature\" 2>nul || echo \"\"")
-                    def fixes = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^fix\\|^bugfix\" 2>nul || echo \"\"")
-                    def docs = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^docs\\|^doc\" 2>nul || echo \"\"")
-                    def tests = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^test\\|^tests\" 2>nul || echo \"\"")
-                    def ci = runBatOutput("git log ${releaseRangePrefix}--oneline --grep=\"^ci\\|^build\\|^pipeline\" 2>nul || echo \"\"")
-                    def others = runBatOutput("git log ${releaseRangePrefix}--oneline --invert-grep --grep=\"^feat\\|^feature\\|^fix\\|^bugfix\\|^docs\\|^doc\\|^test\\|^tests\\|^ci\\|^build\\|^pipeline\" 2>nul || echo \"\"")
+                    def features = runBatOutput(
+                        "git log ${releaseRangePrefix}--oneline --grep=\"^feat:\" 2>nul || echo \"\""
+                    )
 
-                    def releaseBody = """## Changes
+                    def fixes = runBatOutput(
+                        "git log ${releaseRangePrefix}--oneline --grep=\"^fix:\" 2>nul || echo \"\""
+                    )
+
+                    def docs = runBatOutput(
+                        "git log ${releaseRangePrefix}--oneline --grep=\"^docs:\" 2>nul || echo \"\""
+                    )
+
+                    def tests = runBatOutput(
+                        "git log ${releaseRangePrefix}--oneline --grep=\"^test:\" 2>nul || echo \"\""
+                    )
+
+                    def ci = runBatOutput(
+                        "git log ${releaseRangePrefix}--oneline --grep=\"^ci:\" 2>nul || echo \"\""
+                    )
+
+                    def others = runBatOutput(
+                        "git log ${releaseRangePrefix} --oneline ^\r\n" +
+                        "                    --invert-grep ^\r\n" +
+                        "                    --grep=\"^feat:\" ^\r\n" +
+                        "                    --grep=\"^fix:\" ^\r\n" +
+                        "                    --grep=\"^docs:\" ^\r\n" +
+                        "                    --grep=\"^test:\" ^\r\n" +
+                        "                    --grep=\"^ci:\" ^\r\n" +
+                        "                    2>nul || echo \"\""
+                    )
+
+                    def releaseBody = """# Release v${env.VERSION}
+
+## Changes
 
 ### Features
+
 ${features ?: "- No new features in this release."}
 
 ### Bug Fixes
+
 ${fixes ?: "- No bug fixes in this release."}
 
 ### Documentation
+
 ${docs ?: "- No documentation changes in this release."}
 
 ### Tests
+
 ${tests ?: "- No test changes in this release."}
 
 ### CI/CD & Build
+
 ${ci ?: "- No CI/CD changes in this release."}
 
 ### Other Changes
+
 ${others ?: "- No other changes in this release."}
 
 ---
 
-**Docker Images:**
-- ${env.DOCKER_USER}/circleguard-auth-service:stage
-- ${env.DOCKER_USER}/circleguard-identity-service:stage
-- ${env.DOCKER_USER}/circleguard-form-service:stage
-- ${env.DOCKER_USER}/circleguard-promotion-service:stage
-- ${env.DOCKER_USER}/circleguard-notification-service:stage
-- ${env.DOCKER_USER}/circleguard-gateway-service:stage
-- ${env.DOCKER_USER}/circleguard-file-service:stage
-- ${env.DOCKER_USER}/circleguard-dashboard-service:stage
+## Docker Images
 
-**Deployment Notes:**
-- Deployed to Kubernetes master namespace
-- All services use Docker image tag: `stage`
-- Verify deployment: `kubectl get pods -n master`
+* ${env.DOCKER_USER}/circleguard-auth-service:v${env.VERSION}
+* ${env.DOCKER_USER}/circleguard-identity-service:v${env.VERSION}
+* ${env.DOCKER_USER}/circleguard-form-service:v${env.VERSION}
+* ${env.DOCKER_USER}/circleguard-promotion-service:v${env.VERSION}
+* ${env.DOCKER_USER}/circleguard-notification-service:v${env.VERSION}
+* ${env.DOCKER_USER}/circleguard-gateway-service:v${env.VERSION}
+* ${env.DOCKER_USER}/circleguard-file-service:v${env.VERSION}
+* ${env.DOCKER_USER}/circleguard-dashboard-service:v${env.VERSION}
+
+---
+
+## Deployment Notes
+
+* Deployed to Kubernetes master namespace
+* Images promoted from stage environment
+* Mutable production alias updated with tag: master
+* Immutable release deployed with tag: v${env.VERSION}
+* Verify deployment:
+  kubectl get pods -n master
 """
+                    writeFile(
+                        file: "${env.RELEASE_NOTES_FILE}",
+                        text: releaseBody
+                    )
 
-                    writeFile file: "${RELEASE_NOTES_FILE}", text: releaseBody
                     env.RELEASE_BODY = releaseBody
                 }
-                archiveArtifacts artifacts: "${RELEASE_NOTES_FILE}", allowEmptyArchive: false
+
+                archiveArtifacts(
+                    artifacts: "${env.RELEASE_NOTES_FILE}",
+                    allowEmptyArchive: false
+                )
             }
         }
+
         stage('Git Tag Release') {
             steps {
-                withCredentials([string(credentialsId: env.GITHUB_TOKEN_ID, variable: 'GITHUB_TOKEN')]) {
+
+                withCredentials([string(
+                    credentialsId: env.GITHUB_TOKEN_ID,
+                    variable: 'GITHUB_TOKEN'
+                )]) {
+
                     bat 'git config user.name "Jenkins CI"'
                     bat 'git config user.email "jenkins@users.noreply.github.com"'
-                    bat "git tag -a v%VERSION% -m \"Release v%VERSION%\""
-                    bat "git push https://x-access-token:%GITHUB_TOKEN%@github.com/%GITHUB_OWNER%/%GITHUB_REPO%.git refs/tags/v%VERSION%"
+
+                    bat """
+                    git tag -a v${env.VERSION} -m "Release v${env.VERSION}"
+                    """
+
+                    bat """
+                    git push https://x-access-token:%GITHUB_TOKEN%@github.com/%GITHUB_OWNER%/%GITHUB_REPO%.git refs/tags/v${env.VERSION}
+                    """
                 }
             }
         }
+
         stage('Publish GitHub Release') {
             steps {
-                withCredentials([string(credentialsId: env.GITHUB_TOKEN_ID, variable: 'GITHUB_TOKEN')]) {
+
+                withCredentials([string(
+                    credentialsId: env.GITHUB_TOKEN_ID,
+                    variable: 'GITHUB_TOKEN'
+                )]) {
+
                     script {
+
+                        def escapedBody = env.RELEASE_BODY
+                            .replace('\\', '\\\\')
+                            .replace('"', '\\"')
+                            .replace('\n', '\\n')
+
                         def jsonBody = """
                         {
-                            "tag_name": "v${VERSION}",
-                            "name": "Release v${VERSION}",
-                            "body": "${env.RELEASE_BODY.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')}",
+                            "tag_name": "v${env.VERSION}",
+                            "name": "Release v${env.VERSION}",
+                            "body": "${escapedBody}",
                             "draft": false,
                             "prerelease": false
                         }
                         """
 
-                        writeFile file: 'github-release-payload.json', text: jsonBody
+                        writeFile(
+                            file: 'github-release-payload.json',
+                            text: jsonBody
+                        )
 
                         bat """
-                            curl -L -X POST "https://api.github.com/repos/%GITHUB_OWNER%/%GITHUB_REPO%/releases" ^
-                            -H "Accept: application/vnd.github+json" ^
-                            -H "Authorization: Bearer %GITHUB_TOKEN%" ^
-                            -H "X-GitHub-Api-Version: 2022-11-28" ^
-                            -d @github-release-payload.json
+                        curl -L -X POST ^
+                        "https://api.github.com/repos/%GITHUB_OWNER%/%GITHUB_REPO%/releases" ^
+                        -H "Accept: application/vnd.github+json" ^
+                        -H "Authorization: Bearer %GITHUB_TOKEN%" ^
+                        -H "X-GitHub-Api-Version: 2022-11-28" ^
+                        -d @github-release-payload.json
                         """
                     }
                 }
             }
         }
     }
+
     post {
         success {
-            echo "Release v${VERSION} deployed to master namespace and published to GitHub"
+            echo "Release v${env.VERSION} deployed to master namespace and published to GitHub"
         }
+
         failure {
             echo "Master pipeline failed. Review logs and re-run."
         }
