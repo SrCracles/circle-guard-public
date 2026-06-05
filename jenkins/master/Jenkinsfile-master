@@ -32,15 +32,15 @@ pipeline {
                         bat(script: "@echo off\r\n${command}", returnStatus: true)
                     }
 
-                    def lastTag = "v0.0.0"
+                    def lastTag = "v1.0.0"
 
-                    if (runBatStatus('git describe --tags --abbrev=0 >nul 2>nul') == 0) {
-                        lastTag = runBatOutput('git describe --tags --abbrev=0')
+                    if (runBatStatus('git describe --tags --match "v*.*.*" --abbrev=0 >nul 2>nul') == 0) {
+                        lastTag = runBatOutput('git describe --tags --match "v*.*.*" --abbrev=0')
                     }
 
                     echo "Last tag detected: ${lastTag}"
 
-                    def commits = runBatOutput("git log ${lastTag}..HEAD --pretty=%B")
+                    def commits = runBatOutput("git log ${lastTag}..HEAD --pretty=%%B")
 
                     def version = lastTag.replace("v", "").tokenize('.')
 
@@ -232,7 +232,7 @@ pipeline {
                     def lastTag = ""
 
                     try {
-                        lastTag = runBatOutput('git describe --tags --abbrev=0')
+                        lastTag = runBatOutput('git describe --tags --match "v*.*.*" --abbrev=0')
                     } catch(Exception ignored) {}
 
                     def releaseRange = lastTag ? "${lastTag}..HEAD" : ""
