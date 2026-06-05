@@ -64,6 +64,7 @@ subprojects {
         violationRules {
             rule {
                 limit {
+                    counter = "LINE"
                     minimum = "0.60".toBigDecimal()
                 }
             }
