@@ -1,153 +1,421 @@
-# Patrones de Diseño de Infraestructura
+# Patrones de Diseño — CircleGuard
 
-Este documento describe los patrones de infraestructura implementados en el proyecto CircleGuard, con ejemplos concretos de cada archivo involucrado.
+Este documento identifica y describe los patrones de diseño implementados en la arquitectura de CircleGuard. Para cada patron se indica su nombre, descripcion, el servicio o componente donde aplica, el problema que resuelve y evidencia concreta en el codigo del proyecto.
 
 ---
 
-## Patron 1: External Configuration — Capa Kubernetes (K8s ConfigMap & Secret)
+## Patron 1: API Gateway
 
-### Contexto
+**Nombre:** API Gateway
 
-Los microservicios Spring Boot necesitan conectarse a PostgreSQL, Kafka, Redis, Neo4j y LDAP. Los valores de conexion (URLs, usuarios, contrasenas) varian entre ambientes (dev, stage, master) y no deben estar hardcodeados dentro de las imagenes Docker.
+**Descripcion:** Un punto de entrada unico para todos los clientes de la aplicacion. El gateway concentra la validacion de tokens (JWT y QR), el enrutamiento y el control de acceso antes de que las solicitudes lleguen a los microservicios internos.
 
-### Solucion
+**Servicio / Componente:** `circleguard-gateway-service` — `GateController`, `QrValidationService`
 
-Toda la configuracion se inyecta en los Pods de Kubernetes a traves de dos recursos:
+**Problema que resuelve:** Sin un gateway, cada microservicio tendria que implementar su propia capa de validacion de tokens y control de acceso, creando codigo duplicado y un perimetro de seguridad inconsistente. El gateway centraliza la barrera de acceso fisico al campus.
 
-| Recurso | Archivo | Proposito |
-|---------|---------|-----------|
-| `ConfigMap` | `k8s/base/configmap.yaml` | Variables de configuracion no sensibles: URLs de servicios, nombres de topics Kafka, puertos, dialecto de BD |
-| `Secret` | `k8s/base/secret.yaml` | Credenciales sensibles: contrasenas de BD, Neo4j, LDAP |
+**Evidencia:**
 
-### Como se aplica
+```java
+// services/circleguard-gateway-service/src/main/java/com/circleguard/gateway/controller/GateController.java
+@RestController
+@RequestMapping("/api/v1/gate")
+public class GateController {
+    private final QrValidationService validationService;
 
-Cada `Deployment` en `k8s/base/` carga la configuracion mediante `envFrom`, lo que inyecta **todas** las claves del ConfigMap y Secret como variables de entorno del contenedor:
-
-```yaml
-# Ejemplo: auth-deployment.yaml
-containers:
-  - name: circleguard-auth-service
-    image: srcracles/circleguard-auth-service:dev
-    envFrom:
-      - configMapRef:
-          name: circleguard-config    # Carga TODAS las keys del ConfigMap
-      - secretRef:
-          name: circleguard-secrets   # Carga TODAS las keys del Secret
-    env:
-      - name: SPRING_APPLICATION_NAME
-        value: "circleguard-auth-service"
-      - name: SPRING_DATASOURCE_URL
-        value: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard_auth"
+    @PostMapping("/validate")
+    public ResponseEntity<QrValidationService.ValidationResult> validate(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        return ResponseEntity.ok(validationService.validateToken(token));
+    }
+}
 ```
 
-Spring Boot recoge automaticamente las variables de entorno en mayusculas como propiedades de aplicacion (`SPRING_DATASOURCE_URL` → `spring.datasource.url`), por lo que no se necesita ninguna anotacion especial.
+```java
+// services/circleguard-gateway-service/src/main/java/com/circleguard/gateway/service/QrValidationService.java
+public ValidationResult validateToken(String token) {
+    // Valida el JWT del QR y consulta el estado de salud en Redis
+    String status = redisTemplate.opsForValue().get(STATUS_KEY_PREFIX + anonymousId);
 
-### Variables en el ConfigMap
-
-| Variable | Descripcion |
-|----------|-------------|
-| `SPRING_DATASOURCE_URL` | URL base de PostgreSQL (cada servicio la sobreescribe con su propia DB) |
-| `SPRING_DATASOURCE_USERNAME` | Usuario de PostgreSQL |
-| `SPRING_KAFKA_BOOTSTRAP_SERVERS` | Broker de Kafka en el namespace `infra` |
-| `SPRING_DATA_REDIS_HOST` / `PORT` | Redis para el gateway service |
-| `SPRING_NEO4J_URI` | Bolt URI de Neo4j para el promotion service |
-| `SPRING_LDAP_URLS` / `BASE` | LDAP del campus para autenticacion |
-| `JWT_SECRET` / `JWT_EXPIRATION` | Configuracion de tokens JWT |
-| `QR_SECRET` / `QR_EXPIRATION` | Configuracion de tokens QR de acceso |
-| `AUTH_API_URL` | URL del auth-service (usada por notification-service) |
-| `IDENTITY_SERVICE_URL` | URL del identity-service (usada por auth-service) |
-
-### Variables en el Secret
-
-| Variable | Descripcion |
-|----------|-------------|
-| `SPRING_DATASOURCE_PASSWORD` | Contrasena de PostgreSQL |
-| `SPRING_NEO4J_AUTHENTICATION_PASSWORD` | Contrasena de Neo4j |
-| `SPRING_LDAP_PASSWORD` | Contrasena del bind user de LDAP |
-
-### Resultado
-
-Ningun archivo `application.properties` o `application.yml` dentro de las imagenes Docker contiene URLs ni credenciales de produccion. Los valores de conexion se resuelven en tiempo de ejecucion cuando el Pod arranca en el cluster.
+    if ("CONTAGIED".equals(status) || "POTENTIAL".equals(status)) {
+        return new ValidationResult(false, "RED", "Access Denied: Health Risk Detected");
+    }
+    return new ValidationResult(true, "GREEN", "Welcome to Campus");
+}
+```
 
 ---
 
-## Patron 2: External Configuration — Capa CI/CD (Jenkins Global Properties)
+## Patron 2: Event-Driven Architecture
 
-### Contexto
+**Nombre:** Event-Driven Architecture (Arquitectura basada en eventos)
 
-Los Jenkinsfiles de los 10 pipelines (8 dev, 1 stage, 1 master) compartian valores hardcodeados como `DOCKER_USER = 'srcracles'` y las IDs de las credenciales de Jenkins (`dockerhub-credentials`, `github-token`). Esto hace dificil que otro equipo o fork use el proyecto sin editar todos los archivos.
+**Descripcion:** Los microservicios se comunican de forma asincrona mediante eventos publicados en topicos de Apache Kafka. El productor del evento no conoce ni depende de los consumidores. Los servicios reaccionan autonomamente a los eventos que les son relevantes.
 
-### Solucion
+**Servicio / Componente:** `circleguard-promotion-service` → `circleguard-notification-service` via Kafka (`HealthStatusService`, `SurveyListener`, `ExposureNotificationListener`)
 
-Se implemento en dos niveles:
+**Problema que resuelve:** El acoplamiento sincronico directo entre servicios reduce la disponibilidad del sistema: si el servicio de notificaciones cae, el servicio de promocion no puede procesar estados de salud. Kafka desacopla los servicios y permite que cada uno escale y falle de forma independiente.
 
-#### Nivel 1: Jenkins Global Properties (por usuario/equipo)
+**Evidencia:**
 
-Estas variables se configuran **una sola vez** en `Manage Jenkins > System > Global properties > Environment variables`:
+```java
+// services/circleguard-promotion-service/.../service/HealthStatusService.java
+// Productor: publica evento cuando cambia el estado de salud de un usuario
+kafkaTemplate.send(TOPIC_STATUS_CHANGED, anonymousId, payload);
+kafkaTemplate.send("alert.priority", anonymousId, priorityPayload);
+kafkaTemplate.send("circle.fenced", circle.getId().toString(), circlePayload);
+```
 
-| Variable Jenkins | Descripcion | Default (fallback) |
-|-----------------|-------------|-------------------|
-| `CG_DOCKER_USER` | Usuario de DockerHub | `srcracles` |
-| `CG_GITHUB_OWNER` | Owner del repo en GitHub | `SrCracles` |
-| `CG_GITHUB_REPO` | Nombre del repo GitHub | `circle-guard-public` |
+```java
+// services/circleguard-notification-service/.../service/ExposureNotificationListener.java
+// Consumidor: reacciona al evento publicado por promotion-service
+@KafkaListener(topics = "promotion.status.changed", groupId = "notification-group")
+public void handleStatusChange(String eventJson) {
+    // ...
+    dispatcher.dispatch(userId, status);
+    lmsService.syncRemoteAttendance(userId, status);
+}
+```
 
-En los Jenkinsfiles, se referencian con fallback silencioso para no romper entornos existentes:
+```java
+// services/circleguard-promotion-service/.../listener/SurveyListener.java
+// Consumidor: reacciona a encuestas enviadas por form-service
+@KafkaListener(topics = "survey.submitted", groupId = "promotion-service-group")
+public void onSurveySubmitted(Map<String, Object> event) {
+    if (Boolean.TRUE.equals(hasSymptoms)) {
+        healthStatusService.updateStatus(anonymousId, "SUSPECT");
+    }
+}
+```
+
+**Topicos de Kafka utilizados:**
+
+| Topico | Productor | Consumidor |
+|--------|-----------|------------|
+| `survey.submitted` | `circleguard-form-service` | `circleguard-promotion-service` |
+| `promotion.status.changed` | `circleguard-promotion-service` | `circleguard-notification-service` |
+| `alert.priority` | `circleguard-promotion-service` | `circleguard-notification-service` |
+| `circle.fenced` | `circleguard-promotion-service` | `circleguard-notification-service` |
+| `certificate.validated` | `circleguard-form-service` | `circleguard-promotion-service` |
+
+---
+
+## Patron 3: State Machine (Maquina de Estados)
+
+**Nombre:** State Machine
+
+**Descripcion:** El estado de salud de cada usuario sigue una maquina de estados finita con transiciones explicitas y reglas de negocio estrictas. Las transiciones son disparadas por eventos (envio de encuesta, validacion de certificado) o por tiempo (vencimiento de la ventana de aislamiento).
+
+**Servicio / Componente:** `circleguard-promotion-service` — `HealthStatusService`, `StatusLifecycleService`
+
+**Problema que resuelve:** Sin una maquina de estados, las reglas de transicion (quien puede pasar a ACTIVE, cuando expira una cuarentena, como se propaga a contactos) estarian dispersas en multiples lugares del codigo, generando inconsistencias y bugs de logica de negocio graves.
+
+**Diagrama de estados:**
+
+```
+ACTIVE ──(sintomas)──> SUSPECT ──(contacto confirmado)──> PROBABLE
+  ^                       |                                    |
+  |                   (certificado                         (ventana
+  |                    aprobado o                          expirada)
+  |                    ventana expirada)                       |
+  └───────────────────────┴────────────────────────────────────┘
+                                    |
+                               (alta medica)
+                                    v
+                               RECOVERED
+                                    |
+                            (30 dias de inmunidad)
+                                    v
+                                  ACTIVE
+```
+
+**Evidencia:**
+
+```java
+// services/circleguard-promotion-service/.../service/HealthStatusService.java
+// Propagacion de estado: CONFIRMED -> SUSPECT (1 salto), CONFIRMED -> PROBABLE (2 saltos)
+String unifiedQuery =
+    "MATCH (source:User {anonymousId: $id}) " +
+    "SET source.status = $status, source.statusUpdatedAt = timestamp() " +
+    "WITH source " +
+    "OPTIONAL MATCH (source)-[r1]-(c1:User) " +
+    "WHERE (...contacto valido...) " +
+    "  AND c1.status <> 'CONFIRMED' AND c1.status <> 'RECOVERED' " +
+    "WITH source, c1, " +
+    "     CASE WHEN $status = 'CONFIRMED' THEN 'SUSPECT' " +
+    "          WHEN $status = 'SUSPECT' THEN 'PROBABLE' " +
+    "          ELSE c1.status END as l1Status " +
+    // ...
+```
+
+```java
+// services/circleguard-promotion-service/.../service/StatusLifecycleService.java
+// Transicion automatica por tiempo: SUSPECT/PROBABLE -> ACTIVE al vencer la ventana
+@Scheduled(cron = "0 0 * * * *") // Cada hora
+public void processAutomaticTransitions() {
+    long expirationThreshold = System.currentTimeMillis() -
+            ((long)settings.getMandatoryFenceDays() * 24 * 60 * 60 * 1000);
+    // Libera usuarios cuya ventana de aislamiento ha expirado
+}
+```
+
+```java
+// Guarda de transicion: impide salir de cuarentena antes de tiempo
+private void checkFenceWindow(String anonymousId) {
+    if (elapsed < fenceDurationMs) {
+        long remainingDays = (fenceDurationMs - elapsed) / (24 * 60 * 60 * 1000);
+        throw new FenceException("Cannot transition to ACTIVE. User is in mandatory fence window for "
+                + remainingDays + " more days.");
+    }
+}
+```
+
+---
+
+## Patron 4: Repository
+
+**Nombre:** Repository
+
+**Descripcion:** Capa de abstraccion sobre el acceso a datos que desacopla la logica de negocio del mecanismo de persistencia. El dominio trabaja con interfaces de repositorio sin conocer si el almacenamiento subyacente es PostgreSQL, Neo4j o Redis.
+
+**Servicio / Componente:** Todos los servicios — especialmente `circleguard-promotion-service` con repositorios duales (JPA para PostgreSQL + Spring Data Neo4j para el grafo)
+
+**Problema que resuelve:** Permite cambiar el motor de base de datos sin modificar la logica de negocio. Tambien facilita la escritura de tests con implementaciones mock o en memoria.
+
+**Evidencia:**
+
+```java
+// services/circleguard-promotion-service/.../repository/graph/UserNodeRepository.java
+// Repositorio Neo4j con queries Cypher personalizados
+public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
+
+    @Query("MATCH (u1:User {anonymousId: $sourceId}), (u2:User {anonymousId: $targetId}) " +
+           "MERGE (u1)-[r:ENCOUNTERED {locationId: $locationId}]-(u2) " +
+           "ON CREATE SET r.startTime = $timestamp, r.duration = 0 " +
+           "ON MATCH SET r.duration = ($timestamp - r.startTime) / 1000")
+    void recordEncounter(String sourceId, String targetId, Long timestamp, String locationId);
+
+    @Query("MATCH ()-[r:ENCOUNTERED]-() WHERE r.startTime < $threshold DELETE r RETURN count(r)")
+    Long purgeStaleEncounters(Long threshold);
+}
+```
+
+```java
+// services/circleguard-promotion-service/.../repository/jpa/SystemSettingsRepository.java
+// Repositorio JPA para configuracion de sistema en PostgreSQL
+public interface SystemSettingsRepository extends JpaRepository<SystemSettings, Long> {
+    // Acceso unificado independiente del motor de BD
+}
+```
+
+El mismo servicio (`HealthStatusService`) usa ambos repositorios de forma transparente:
+
+```java
+private final UserNodeRepository userNodeRepository;          // Neo4j
+private final SystemSettingsRepository systemSettingsRepository; // PostgreSQL
+private final StringRedisTemplate redisTemplate;              // Redis
+```
+
+---
+
+## Patron 5: Chain of Responsibility
+
+**Nombre:** Chain of Responsibility
+
+**Descripcion:** La autenticacion de usuarios sigue una cadena de responsabilidad: primero se intenta autenticar via LDAP corporativo (directorio del campus), y si ese proveedor falla, la solicitud pasa al siguiente eslabon de la cadena: la base de datos local.
+
+**Servicio / Componente:** `circleguard-auth-service` — `DualChainAuthenticationProvider`
+
+**Problema que resuelve:** El sistema debe soportar dos tipos de usuarios: miembros del campus (autenticados via LDAP universitario) y usuarios locales (creados directamente en la BD). Sin la cadena, se necesitaria logica condicional compleja en el punto de autenticacion. La cadena permite agregar nuevos proveedores de identidad sin modificar el codigo cliente.
+
+**Evidencia:**
+
+```java
+// services/circleguard-auth-service/.../security/DualChainAuthenticationProvider.java
+@Component
+public class DualChainAuthenticationProvider implements AuthenticationProvider {
+
+    private final LdapAuthenticationProvider ldapProvider;
+    private final DaoAuthenticationProvider localProvider;
+
+    @Override
+    public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+        try {
+            // Eslabon 1: Intenta autenticar via LDAP del campus
+            return ldapProvider.authenticate(authentication);
+        } catch (AuthenticationException e) {
+            // Eslabon 2: Fallback a la base de datos local
+            return localProvider.authenticate(authentication);
+        }
+    }
+}
+```
+
+---
+
+## Patron 6: External Configuration
+
+**Nombre:** External Configuration (Configuracion Externa)
+
+**Descripcion:** Toda la configuracion sensible o que varia entre ambientes (URLs, credenciales, secretos JWT, usuarios de DockerHub) se externaliza fuera del codigo fuente y de las imagenes Docker. Se implementa en dos niveles: variables de entorno inyectadas en Kubernetes y propiedades globales configuradas en Jenkins.
+
+**Servicio / Componente:** Todos los microservicios (capa Kubernetes: `k8s/base/configmap.yaml`, `k8s/base/secret.yaml`) y todos los pipelines CI/CD (capa Jenkins: `jenkins/jenkins.properties`)
+
+**Problema que resuelve:** Las imagenes Docker no contienen URLs de produccion ni credenciales. Si alguien cambia el usuario de DockerHub o las credenciales en Jenkins, no es necesario modificar ningun archivo del repositorio. Esto permite que cualquier equipo haga un fork y despliegue el proyecto simplemente configurando unas pocas variables en su entorno.
+
+**Evidencia — Capa Kubernetes (ConfigMap + Secret):**
+
+```yaml
+# k8s/base/configmap.yaml
+# Variables de configuracion no sensibles inyectadas en todos los Pods
+envFrom:
+  - configMapRef:
+      name: circleguard-config   # URLs de servicios, topics Kafka, puertos
+  - secretRef:
+      name: circleguard-secrets  # Credenciales de BD, Neo4j, LDAP
+```
+
+Los Deployments consumen la configuracion sin referencias hardcodeadas:
+
+```yaml
+# k8s/base/auth-deployment.yaml
+env:
+  - name: SPRING_APPLICATION_NAME
+    value: "circleguard-auth-service"
+  - name: SPRING_DATASOURCE_URL
+    value: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard_auth"
+```
+
+**Evidencia — Capa Jenkins (Global Properties + jenkins.properties):**
 
 ```groovy
+// jenkins/master/Jenkinsfile-master (patron aplicado en todos los Jenkinsfiles)
 environment {
     DOCKER_USER = "${env.CG_DOCKER_USER ?: 'srcracles'}"
     DOCKERHUB_CREDENTIALS_ID = "${env.CG_DOCKERHUB_CREDENTIALS_ID ?: 'dockerhub-credentials'}"
 }
 ```
 
-#### Nivel 2: `jenkins/jenkins.properties` (configuracion del proyecto)
-
-Las rutas de archivos de tests que pertenecen al repositorio (no al usuario) se centralizan en `jenkins/jenkins.properties`:
-
 ```properties
+# jenkins/jenkins.properties — configuracion del proyecto (rutas de tests)
 NEWMAN_COLLECTION=tests/postman/circle-guard-e2e-collection.json
-NEWMAN_ENVIRONMENT=tests/postman/circle-guard-environment.json
 LOCUST_PERF_FILE=tests/locustfile-performance.py
-LOCUST_STRESS_FILE=tests/locustfile-stress.py
 ```
 
-El `Jenkinsfile-stage` las carga al inicio leyendo el archivo con `readFile` y parseando las líneas manualmente para evitar restricciones del sandbox de seguridad de Jenkins (como el bloqueo a `java.util.Properties`):
+| Variable Jenkins | Descripcion | Fallback por defecto |
+|-----------------|-------------|----------------------|
+| `CG_DOCKER_USER` | Usuario de DockerHub | `srcracles` |
+| `CG_GITHUB_OWNER` | Owner del repo GitHub | `SrCracles` |
+| `CG_GITHUB_REPO` | Nombre del repo GitHub | `circle-guard-public` |
+| `CG_DOCKERHUB_CREDENTIALS_ID` | ID de credencial Jenkins | `dockerhub-credentials` |
+| `CG_GITHUB_TOKEN_ID` | ID de token GitHub en Jenkins | `github-token` |
 
-```groovy
-stage('Checkout') {
-    steps {
-        checkout scm
-        script {
-            def propsFileContent = readFile('jenkins/jenkins.properties')
-            def lines = propsFileContent.split('\r?\n')
-            for (line in lines) {
-                line = line.trim()
-                if (line && !line.startsWith('#') && line.contains('=')) {
-                    def parts = line.split('=', 2)
-                    def key = parts[0].trim()
-                    def val = parts[1].trim()
-                    if (key == 'NEWMAN_COLLECTION') env.NEWMAN_COLLECTION = val
-                    if (key == 'NEWMAN_ENVIRONMENT') env.NEWMAN_ENVIRONMENT = val
-                }
-            }
-        }
+---
+
+## Patron 7: Cache-Aside
+
+**Nombre:** Cache-Aside (Cache Lateral)
+
+**Descripcion:** El estado de salud de cada usuario se almacena en Redis como cache de lectura rapida. La logica de escritura actualiza explicitamente tanto el grafo de Neo4j (fuente de verdad) como la cache de Redis en cada transicion de estado. Para lecturas de baja latencia (como la validacion en el gateway), Redis responde directamente sin consultar Neo4j.
+
+**Servicio / Componente:** `circleguard-promotion-service` (`HealthStatusService`, `CacheConfig`), `circleguard-gateway-service` (`QrValidationService`)
+
+**Problema que resuelve:** Las consultas al grafo de Neo4j que calculan el estado de salud con propagacion de dos saltos son costosas computacionalmente. El gateway necesita responder en milisegundos para validar el acceso fisico al campus. Sin cache, cada validacion de QR ejecutaria una query compleja al grafo.
+
+**Evidencia:**
+
+```java
+// services/circleguard-promotion-service/.../config/CacheConfig.java
+@Configuration
+@EnableCaching
+public class CacheConfig {
+    @Bean
+    public CacheManager cacheManager() {
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+                .maximumSize(10000)
+                .expireAfterWrite(5, TimeUnit.MINUTES)
+                .recordStats());
+        cacheManager.setCacheNames(Arrays.asList("userStatus", "proximityMatches",
+                "buildingMetadata", "systemSettings"));
+        return cacheManager;
     }
 }
 ```
 
-### Resultado
+```java
+// services/circleguard-promotion-service/.../service/HealthStatusService.java
+// Escritura: actualiza Neo4j y Redis atomicamente en cada transicion
+redisTemplate.opsForValue().multiSet(cacheUpdates); // hasta 2000 entradas por lote
 
-Para usar el proyecto en un fork o con otra cuenta de DockerHub, basta con cambiar las 5 variables en Jenkins UI, sin tocar ningun archivo del repositorio.
+// Lectura con cache de aplicacion (Caffeine)
+@Cacheable(cacheNames = "userStatus", key = "#anonymousId")
+public String getCachedStatus(String anonymousId) {
+    return redisTemplate.opsForValue().get(STATUS_KEY_PREFIX + anonymousId);
+}
+
+// Invalidacion al actualizar
+@CacheEvict(cacheNames = "userStatus", allEntries = true)
+public void updateStatus(String anonymousId, String status, boolean adminOverride) { ... }
+```
+
+```java
+// services/circleguard-gateway-service/.../service/QrValidationService.java
+// El gateway lee directamente de Redis: O(1) sin tocar Neo4j
+String status = redisTemplate.opsForValue().get(STATUS_KEY_PREFIX + anonymousId);
+```
 
 ---
 
-## Resumen: Donde vive cada configuracion
+## Patron 8: Scheduled / Polling (Tareas Programadas)
 
-| Tipo de Configuracion | Donde se define | Quien lo cambia |
-|-----------------------|----------------|-----------------|
-| URLs de servicios K8s | `k8s/base/configmap.yaml` | Equipo (commit en repo) |
-| Credenciales de BD / LDAP / Neo4j | `k8s/base/secret.yaml` | Equipo (commit en repo) |
-| Usuario de DockerHub | Jenkins Global Properties (`CG_DOCKER_USER`) | Cada equipo en su Jenkins |
-| IDs de credenciales Jenkins | Jenkins Global Properties (`CG_*_CREDENTIALS_ID`) | Cada equipo en su Jenkins |
-| Rutas de archivos de tests | `jenkins/jenkins.properties` | Equipo (commit en repo) |
-| Nombre/owner del repo GitHub | Jenkins Global Properties (`CG_GITHUB_*`) | Cada equipo en su Jenkins |
+**Nombre:** Scheduled Task / Background Processing
+
+**Descripcion:** Operaciones de mantenimiento periodicas se ejecutan en segundo plano mediante tareas programadas (`@Scheduled`). Esto incluye la limpieza del grafo de encuentros y la revaluacion automatica de estados de cuarentena expirados.
+
+**Servicio / Componente:** `circleguard-promotion-service` — `GraphCleanupTask`, `StatusLifecycleService`
+
+**Problema que resuelve:** La limpieza del grafo y la liberacion de usuarios en cuarentena son operaciones que deben ocurrir periodicamente sin intervencion humana. Hacerlas de forma reactiva (en cada request) introduciria latencia en operaciones criticas del usuario.
+
+**Evidencia:**
+
+```java
+// services/circleguard-promotion-service/.../task/GraphCleanupTask.java
+// Elimina encuentros de mas de 14 dias (NFR-4: Minimizacion de datos)
+@Scheduled(cron = "0 0 * * * *") // Cada hora
+@Transactional("neo4jTransactionManager")
+public void purgeStaleEncounters() {
+    long threshold = System.currentTimeMillis() - FOURTEEN_DAYS_MS;
+    Long deletedCount = userNodeRepository.purgeStaleEncounters(threshold);
+    log.info("Graph cleanup successful. Purged {} stale ENCOUNTERED relationships.", deletedCount);
+}
+```
+
+```java
+// services/circleguard-promotion-service/.../service/StatusLifecycleService.java
+// Libera automaticamente usuarios en SUSPECT/PROBABLE cuya ventana expiro
+@Scheduled(cron = "0 0 * * * *") // Cada hora
+@Transactional("neo4jTransactionManager")
+public void processAutomaticTransitions() {
+    long expirationThreshold = System.currentTimeMillis() -
+            ((long)settings.getMandatoryFenceDays() * 24 * 60 * 60 * 1000);
+    // Transiciona usuarios elegibles de vuelta a ACTIVE y notifica via Kafka
+    kafkaTemplate.send(TOPIC_STATUS_CHANGED, id, Map.of("status", "ACTIVE",
+            "reason", "AUTO_WINDOW_EXPIRY"));
+}
+```
+
+---
+
+## Resumen de Patrones
+
+| # | Patron | Categoria | Servicio Principal |
+|---|--------|-----------|--------------------|
+| 1 | API Gateway | Arquitectural | `circleguard-gateway-service` |
+| 2 | Event-Driven Architecture | Arquitectural | `promotion` → `notification` via Kafka |
+| 3 | State Machine | Comportamiento | `circleguard-promotion-service` |
+| 4 | Repository | Datos | Todos los servicios |
+| 5 | Chain of Responsibility | Comportamiento | `circleguard-auth-service` |
+| 6 | External Configuration | Configuracion | K8s + Jenkins |
+| 7 | Cache-Aside | Rendimiento | `promotion` + `gateway` via Redis |
+| 8 | Scheduled Task | Operacional | `circleguard-promotion-service` |
