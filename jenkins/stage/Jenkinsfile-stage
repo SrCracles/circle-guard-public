@@ -67,7 +67,7 @@ pipeline {
                 }
                 echo 'Deploying services to Kind stage namespace...'
                 bat 'kubectl apply -k k8s/stage/'
-                bat 'kubectl rollout status deployment -n stage --timeout=300s'
+                bat 'kubectl rollout status deployment -n stage --timeout=600s'
             }
         }
         stage('E2E Tests - Newman') {
