@@ -132,7 +132,7 @@ circle-guard-public/
 │   ├── stage/
 │   │   └── Jenkinsfile-stage            # Pipeline stage (E2E + Locust)
 │   └── master/
-│       └── Jenkinsfile-master           # Pipeline master (deploy K8s + release notes)
+│       └── Jenkinsfile-master           # Pipeline master (versionado semantico, deploy K8s + release notes)
 ├── services/
 │   ├── circleguard-auth-service/
 │   │   └── Dockerfile                   # Imagen Docker para auth-service (port 8180)
@@ -162,7 +162,7 @@ circle-guard-public/
 | **Registry de Imagenes** | DockerHub (usuario: `srcracles`) |
 | **E2E Testing** | Newman CLI con colecciones Postman |
 | **Performance Testing** | Locust (Python) |
-| **Estrategia de Tags** | `dev` -> `stage` -> `master`. Dev compila y pushea `:dev`. Stage prueba y promueve a `:stage`. Master hace pull de `:stage` y deploya. |
+| **Estrategia de Tags** | `dev` -> `stage` -> `vX.Y.Z` y `master`. Dev compila y pushea `:dev`. Stage prueba y promueve a `:stage`. Master calcula version semantica, pushea tags inmutables (`:vX.Y.Z`) y mutables (`:master`), y deploya en K8s. |
 | **Release Notes** | GitHub API con token personal |
 | **Permisos Jenkins** | Usuario `jenkins` con acceso a `kubeconfig` y permisos adecuados |
 
@@ -170,13 +170,13 @@ circle-guard-public/
 
 | Servicio | Dev Pipeline | Stage Pipeline | Master Pipeline |
 |----------|-------------|----------------|-----------------|
-| auth-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
-| identity-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
-| form-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
-| promotion-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
-| notification-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
-| gateway-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
-| file-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
-| dashboard-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Pull (`:stage`) -> Deploy K8s |
+| auth-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
+| identity-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
+| form-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
+| promotion-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
+| notification-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
+| gateway-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
+| file-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
+| dashboard-service | Unit Tests -> Build -> Push (`:dev`) | Pull (`:dev`) -> E2E + Locust -> Promote (`:stage`) | Versioning -> Push (`:vX.Y.Z`, `:master`) -> Deploy K8s |
 
 > **Nota**: La infraestructura compartida (Kafka, Neo4j, PostgreSQL, Redis, Zookeeper, OpenLDAP) se levanta como parte del ambiente Stage para las pruebas E2E y de rendimiento.
