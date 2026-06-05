@@ -131,15 +131,7 @@ pipeline {
                         'circleguard-dashboard-service'
                     ]
 
-                    withCredentials([usernamePassword(
-                        credentialsId: env.DOCKERHUB_CREDENTIALS_ID,
-                        usernameVariable: 'DOCKER_USER_VAR',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
-
-                        bat '''
-                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER_VAR% --password-stdin
-                        '''
+                    withDockerRegistry([credentialsId: env.DOCKERHUB_CREDENTIALS_ID, url: '']) {
 
                         for (svc in services) {
 
