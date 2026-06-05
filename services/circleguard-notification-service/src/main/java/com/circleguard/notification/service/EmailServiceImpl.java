@@ -17,6 +17,9 @@ public class EmailServiceImpl implements EmailService {
     private final JavaMailSender mailSender;
     private final AuditLogService auditLogService;
 
+    @org.springframework.beans.factory.annotation.Value("${feature.toggle.email.enabled:true}")
+    private boolean emailEnabled;
+
     @Override
     @Async
     @org.springframework.retry.annotation.Retryable(
@@ -26,6 +29,13 @@ public class EmailServiceImpl implements EmailService {
     )
     public CompletableFuture<Void> sendAsync(String userId, String message) {
         String correlationId = java.util.UUID.randomUUID().toString();
+        
+        if (!emailEnabled) {
+            log.info("Email feature is disabled via toggle. Skipping email to user: {}", userId);
+            auditLogService.logDelivery(userId, "EMAIL", "SKIPPED_TOGGLE", correlationId);
+            return CompletableFuture.completedFuture(null);
+        }
+
         try {
             log.debug("Attempting to send email to user: {}", userId);
             SimpleMailMessage mailMessage = new SimpleMailMessage();

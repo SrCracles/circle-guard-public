@@ -52,3 +52,7 @@ data:
 
   # Kafka JSON deserializer trusted packages
   SPRING_KAFKA_CONSUMER_PROPERTIES_SPRING_JSON_TRUSTED_PACKAGES: "*"
+
+  # Feature Toggles
+  FEATURE_TOGGLE_EMAIL_ENABLED: "true"
+

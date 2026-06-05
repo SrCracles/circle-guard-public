@@ -36,6 +36,7 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 
 ### `circleguard-notification-service`
 * **`TemplateServiceTest`**: Renderizado de templates Freemarker con variables. **Importancia:** Probar el renderizado garantiza que los usuarios reciban mensajes con su estado correcto y enlaces funcionales, evitando confusion en momentos criticos de salud.
+* **`EmailServiceImplTest`**: Funcionalidad de Feature Toggle para el envío de correos. **Importancia:** Valida que el servicio respete la configuración dinámica para encender o apagar el envío de correos y registre adecuadamente la acción en la auditoría sin interrumpir el flujo principal.
 * **`NotificationDispatcherTest`**: Gestión y despacho de notificaciones hacia los distintos canales (email, sms).
 * **`ExposureNotificationListenerTest`**: Recepción de eventos de exposición de Kafka.
 * **`PriorityAlertListenerTest`**: Recepción de notificaciones críticas.

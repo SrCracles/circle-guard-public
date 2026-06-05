@@ -28,6 +28,7 @@ public class NotificationRetryTest {
 
     @Test
     void testEmailRetryLogic() throws Exception {
+        org.springframework.test.util.ReflectionTestUtils.setField(emailService, "emailEnabled", true);
         doThrow(new RuntimeException("Mail server down"))
             .when(mailSender).send(any(SimpleMailMessage.class));
 

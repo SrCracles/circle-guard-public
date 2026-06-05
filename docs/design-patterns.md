@@ -430,6 +430,38 @@ resilience4j.circuitbreaker:
 
 ---
 
+## Patron 10: Feature Toggle
+
+**Descripcion:** Permite habilitar o deshabilitar funcionalidades especificas del sistema sin necesidad de modificar el codigo fuente ni redesplegar los servicios. Las configuraciones son gestionadas dinamicamente mediante variables de entorno que se leen en tiempo de ejecucion.
+
+**Servicio / Componente:** `circleguard-notification-service` — `EmailServiceImpl`
+
+**Problema que resuelve:** Si hay incidentes con un proveedor externo o se desea probar una nueva caracteristica, el Feature Toggle proporciona un mecanismo para desactivar esa porcion especifica del sistema de forma segura, reduciendo el riesgo y mejorando el control en produccion.
+
+**Evidencia:**
+
+```java
+// services/circleguard-notification-service/src/main/java/com/circleguard/notification/service/EmailServiceImpl.java
+@org.springframework.beans.factory.annotation.Value("${feature.toggle.email.enabled:true}")
+private boolean emailEnabled;
+
+public CompletableFuture<Void> sendAsync(String userId, String message) {
+    if (!emailEnabled) {
+        log.info("Email feature is disabled via toggle. Skipping email to user: {}", userId);
+        auditLogService.logDelivery(userId, "EMAIL", "SKIPPED_TOGGLE", correlationId);
+        return CompletableFuture.completedFuture(null);
+    }
+    // ...
+}
+```
+
+```yaml
+# k8s/base/configmap.yaml
+FEATURE_TOGGLE_EMAIL_ENABLED: "true"
+```
+
+---
+
 ## Resumen de Patrones
 
 | # | Patron | Categoria | Servicio Principal |
@@ -443,3 +475,4 @@ resilience4j.circuitbreaker:
 | 7 | Cache-Aside | Rendimiento | `promotion` + `gateway` via Redis |
 | 8 | Scheduled Task | Operacional | `circleguard-promotion-service` |
 | 9 | Circuit Breaker | Resiliencia | `circleguard-auth-service` |
+| 10 | Feature Toggle | Operacional | `circleguard-notification-service` |
