@@ -51,7 +51,9 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 * **`HealthStatusControllerTest`**: Controlador REST de estados.
 * **`PromotionModelsTest`**: Cobertura exhaustiva de DTOs (`BuildingDTO`, `AccessPointDTO`, `FloorDTO`) y modelos (`Building`, `AccessPoint`, `Floor`, `SystemSettings`) y modelos de grafo (`CircleNode`, `UserNode`, `EncounterRelationship`). **Importancia:** Los DTOs son el contrato de API entre `promotion-service` y otros servicios; un cambio inadvertido rompería la integración. Los modelos de grafo afectan directamente las queries Cypher.
 * **`PromotionControllersTest`**: Controladores REST de infraestructura física (`BuildingController`, `AccessPointController`, `FloorController`), señalización (`LocationSignalController`) y sesiones (`SessionHandshakeController`). **Importancia:** Valida la gestión de edificios, pisos y puntos de acceso WiFi, así como la recepción de señales de ubicación que alimentan el trazado de contactos.
-
+* **`AdminControllerTest`**: Pruebas de configuración del sistema (SystemSettings) y toggle de *unconfirmed fencing*.
+* **`MeshControllerTest`**: Pruebas de obtención de estadísticas de conexiones confirmadas y no confirmadas en la red de contactos.
+* **`BuildingServiceTest`**: Pruebas del ciclo de vida (CRUD) de los edificios, incluyendo validación de restricciones al intentar borrar edificios con pisos asociados.
 ### `circleguard-notification-service`
 * **`TemplateServiceTest`**: Renderizado de templates Freemarker con variables. **Importancia:** Probar el renderizado garantiza que los usuarios reciban mensajes con su estado correcto y enlaces funcionales, evitando confusion en momentos criticos de salud.
 * **`EmailServiceImplTest`**: Funcionalidad de Feature Toggle para el envío de correos. **Importancia:** Valida que el servicio respete la configuración dinámica para encender o apagar el envío de correos y registre adecuadamente la acción en la auditoría sin interrumpir el flujo principal.
