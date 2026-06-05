@@ -10,6 +10,7 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 * **`JwtTokenServiceTest`**: Generacion y validacion de tokens JWT (claims, expiracion, firma). **Importancia:** El JWT es el mecanismo central de autenticacion stateless de toda la plataforma. Un bug en la generacion o validacion comprometeria la seguridad de todos los servicios.
 * **`DualChainAuthenticationProviderTest`**: Login fallback LDAP vs local. **Importancia:** La autenticacion dual es un requisito funcional critico. Si el fallback falla, usuarios invitados o cuentas locales quedarian bloqueadas.
 * **`LoginControllerTest`**: Probar controlador de login de forma unitaria.
+* **`IdentityClientTest`**: Validación del comportamiento de fallback (Circuit Breaker) en caso de fallo del `identity-service`. **Importancia:** Asegura la resiliencia del proceso de login evitando bloqueos en cascada o caídas (errores 500) cuando el servicio dependiente está inaccesible o saturado.
 
 ### `circleguard-identity-service`
 * **`IdentityEncryptionConverterTest`**: Encriptacion/desencriptacion de IDs. **Importancia:** FERPA y la privacidad del estudiante dependen de que las identidades reales nunca se expongan. Garantiza que los datos en reposo sean irreversibles sin la clave.

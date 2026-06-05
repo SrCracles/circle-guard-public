@@ -6,8 +6,6 @@ Este documento identifica y describe los patrones de diseño implementados en la
 
 ## Patron 1: API Gateway
 
-**Nombre:** API Gateway
-
 **Descripcion:** Un punto de entrada unico para todos los clientes de la aplicacion. El gateway concentra la validacion de tokens (JWT y QR), el enrutamiento y el control de acceso antes de que las solicitudes lleguen a los microservicios internos.
 
 **Servicio / Componente:** `circleguard-gateway-service` — `GateController`, `QrValidationService`
@@ -47,8 +45,6 @@ public ValidationResult validateToken(String token) {
 ---
 
 ## Patron 2: Event-Driven Architecture
-
-**Nombre:** Event-Driven Architecture (Arquitectura basada en eventos)
 
 **Descripcion:** Los microservicios se comunican de forma asincrona mediante eventos publicados en topicos de Apache Kafka. El productor del evento no conoce ni depende de los consumidores. Los servicios reaccionan autonomamente a los eventos que les son relevantes.
 
@@ -100,9 +96,7 @@ public void onSurveySubmitted(Map<String, Object> event) {
 
 ---
 
-## Patron 3: State Machine (Maquina de Estados)
-
-**Nombre:** State Machine
+## Patron 3: State Machine
 
 **Descripcion:** El estado de salud de cada usuario sigue una maquina de estados finita con transiciones explicitas y reglas de negocio estrictas. Las transiciones son disparadas por eventos (envio de encuesta, validacion de certificado) o por tiempo (vencimiento de la ventana de aislamiento).
 
@@ -174,8 +168,6 @@ private void checkFenceWindow(String anonymousId) {
 
 ## Patron 4: Repository
 
-**Nombre:** Repository
-
 **Descripcion:** Capa de abstraccion sobre el acceso a datos que desacopla la logica de negocio del mecanismo de persistencia. El dominio trabaja con interfaces de repositorio sin conocer si el almacenamiento subyacente es PostgreSQL, Neo4j o Redis.
 
 **Servicio / Componente:** Todos los servicios — especialmente `circleguard-promotion-service` con repositorios duales (JPA para PostgreSQL + Spring Data Neo4j para el grafo)
@@ -220,8 +212,6 @@ private final StringRedisTemplate redisTemplate;              // Redis
 
 ## Patron 5: Chain of Responsibility
 
-**Nombre:** Chain of Responsibility
-
 **Descripcion:** La autenticacion de usuarios sigue una cadena de responsabilidad: primero se intenta autenticar via LDAP corporativo (directorio del campus), y si ese proveedor falla, la solicitud pasa al siguiente eslabon de la cadena: la base de datos local.
 
 **Servicio / Componente:** `circleguard-auth-service` — `DualChainAuthenticationProvider`
@@ -254,8 +244,6 @@ public class DualChainAuthenticationProvider implements AuthenticationProvider {
 ---
 
 ## Patron 6: External Configuration
-
-**Nombre:** External Configuration (Configuracion Externa)
 
 **Descripcion:** Toda la configuracion sensible o que varia entre ambientes (URLs, credenciales, secretos JWT, usuarios de DockerHub) se externaliza fuera del codigo fuente y de las imagenes Docker. Se implementa en dos niveles: variables de entorno inyectadas en Kubernetes y propiedades globales configuradas en Jenkins.
 
@@ -314,8 +302,6 @@ LOCUST_PERF_FILE=tests/locustfile-performance.py
 
 ## Patron 7: Cache-Aside
 
-**Nombre:** Cache-Aside (Cache Lateral)
-
 **Descripcion:** El estado de salud de cada usuario se almacena en Redis como cache de lectura rapida. La logica de escritura actualiza explicitamente tanto el grafo de Neo4j (fuente de verdad) como la cache de Redis en cada transicion de estado. Para lecturas de baja latencia (como la validacion en el gateway), Redis responde directamente sin consultar Neo4j.
 
 **Servicio / Componente:** `circleguard-promotion-service` (`HealthStatusService`, `CacheConfig`), `circleguard-gateway-service` (`QrValidationService`)
@@ -367,9 +353,7 @@ String status = redisTemplate.opsForValue().get(STATUS_KEY_PREFIX + anonymousId)
 
 ---
 
-## Patron 8: Scheduled / Polling (Tareas Programadas)
-
-**Nombre:** Scheduled Task / Background Processing
+## Patron 8: Scheduled Task / Background Processing 
 
 **Descripcion:** Operaciones de mantenimiento periodicas se ejecutan en segundo plano mediante tareas programadas (`@Scheduled`). Esto incluye la limpieza del grafo de encuentros y la revaluacion automatica de estados de cuarentena expirados.
 
@@ -407,6 +391,45 @@ public void processAutomaticTransitions() {
 
 ---
 
+## Patron 9: Circuit Breaker
+
+**Descripcion:** Patrón de resiliencia que previene que fallos en un servicio dependiente (ej. `identity-service`) provoquen bloqueos en cascada en el servicio que lo invoca (`auth-service`). Cuando la tasa de fallos o los tiempos de espera exceden un umbral, el circuito se abre y las peticiones posteriores retornan una respuesta de fallback inmediata ("error controlado") en lugar de esperar un timeout.
+
+**Servicio / Componente:** `circleguard-auth-service` — `IdentityClient`
+
+**Problema que resuelve:** Si `identity-service` experimenta una caída o un pico de latencia, `auth-service` agotaría sus hilos de conexión esperando respuesta. Esto bloquearía el proceso de login para todos los usuarios. El Circuit Breaker evita el agotamiento de recursos retornando un UUID por defecto (modo degradado) cuando el servicio de identidad no está disponible, permitiendo que el sistema siga operando.
+
+**Evidencia:**
+
+```java
+// services/circleguard-auth-service/src/main/java/com/circleguard/auth/client/IdentityClient.java
+@CircuitBreaker(name = "identityService", fallbackMethod = "getAnonymousIdFallback")
+public UUID getAnonymousId(String realIdentity) {
+    String url = identityServiceUrl + "/api/v1/identities/map";
+    Map<String, String> request = Map.of("realIdentity", realIdentity);
+    Map response = restTemplate.postForObject(url, request, Map.class);
+    return UUID.fromString(response.get("anonymousId").toString());
+}
+
+public UUID getAnonymousIdFallback(String realIdentity, Throwable t) {
+    System.err.println("Fallback activated for Identity Service. Returning default UUID.");
+    return UUID.fromString("00000000-0000-0000-0000-000000000000");
+}
+```
+
+```yaml
+# services/circleguard-auth-service/src/main/resources/application.yml
+resilience4j.circuitbreaker:
+  instances:
+    identityService:
+      slidingWindowSize: 10
+      failureRateThreshold: 50
+      waitDurationInOpenState: 10s
+      permittedNumberOfCallsInHalfOpenState: 3
+```
+
+---
+
 ## Resumen de Patrones
 
 | # | Patron | Categoria | Servicio Principal |
@@ -419,3 +442,4 @@ public void processAutomaticTransitions() {
 | 6 | External Configuration | Configuracion | K8s + Jenkins |
 | 7 | Cache-Aside | Rendimiento | `promotion` + `gateway` via Redis |
 | 8 | Scheduled Task | Operacional | `circleguard-promotion-service` |
+| 9 | Circuit Breaker | Resiliencia | `circleguard-auth-service` |
