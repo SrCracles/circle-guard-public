@@ -43,7 +43,7 @@ pipeline {
                     } else {
                         echo "Last semantic tag detected: ${lastTag}"
 
-                        def commits = runBatOutput("git log ${lastTag}..HEAD --pretty=%%B")
+                        def commitSubjects = runBatOutput("git log ${lastTag}..HEAD --pretty=format:%%s")
 
                         def version = lastTag.replace("v", "").tokenize('.')
 
@@ -54,16 +54,17 @@ pipeline {
                         /*
                         Versioning Strategy
 
-                        feat: -> MINOR
-                        everything else -> PATCH
+                        Each feat: commit  -> MINOR +1
+                        Each other commit  -> PATCH +1
+                        Both can accumulate in the same pipeline run
                         */
 
-                        if (commits =~ /(?m)^feat:/) {
-                            minor++
-                            patch = 0
-                        } else {
-                            patch++
-                        }
+                        def lines = commitSubjects ? commitSubjects.split('\n') : []
+                        int featCount  = lines.count { it.trim().startsWith('feat:') }
+                        int otherCount = lines.count { it.trim() && !it.trim().startsWith('feat:') }
+
+                        minor += featCount
+                        patch += otherCount
 
                         env.VERSION = "${major}.${minor}.${patch}"
                     }
