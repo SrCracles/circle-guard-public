@@ -209,7 +209,14 @@ pipeline {
 
                 bat 'kubectl apply -k k8s/master/'
 
-                bat 'kubectl rollout status deployment -n master --timeout=300s'
+                echo 'Waiting for services to become ready one by one...'
+                script {
+                    def services = ['auth', 'identity', 'form', 'gateway', 'notification', 'file', 'promotion', 'dashboard']
+                    for (svc in services) {
+                        echo "Waiting for circleguard-${svc}-service..."
+                        bat "kubectl rollout status deployment/circleguard-${svc}-service -n master --timeout=300s"
+                    }
+                }
             }
         }
 

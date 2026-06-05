@@ -52,11 +52,7 @@ pipeline {
         }
         stage('Deploy to Stage Environment') {
             steps {
-                echo 'Ensuring infra namespace exists and infrastructure is deployed...'
-                bat 'kubectl create namespace infra --dry-run=client -o yaml | kubectl apply -f -'
-                bat 'kubectl apply -k k8s/infra/ || exit 0'
-                bat 'kubectl rollout status deployment -n infra --timeout=300s'
-                echo 'Ensuring stage namespace and base manifests exist...'
+                echo 'Ensuring stage namespace exists...'
                 bat 'kubectl create namespace stage --dry-run=client -o yaml | kubectl apply -f -'
                 echo 'Configuring dynamic Kustomize images...'
                 script {
@@ -65,9 +61,16 @@ pipeline {
                     kustomization = kustomization.replaceAll('newTag: stage', 'newTag: dev')
                     writeFile(file: 'k8s/stage/kustomization.yaml', text: kustomization)
                 }
-                echo 'Deploying services to Kind stage namespace...'
+                echo 'Applying stage manifests...'
                 bat 'kubectl apply -k k8s/stage/'
-                bat 'kubectl rollout status deployment -n stage --timeout=600s'
+                echo 'Waiting for services to become ready one by one...'
+                script {
+                    def services = ['auth', 'identity', 'form', 'gateway', 'notification', 'file', 'promotion', 'dashboard']
+                    for (svc in services) {
+                        echo "Waiting for circleguard-${svc}-service..."
+                        bat "kubectl rollout status deployment/circleguard-${svc}-service -n stage --timeout=300s"
+                    }
+                }
             }
         }
         stage('E2E Tests - Newman') {
