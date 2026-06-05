@@ -9,13 +9,25 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    def props = new Properties()
                     def propsFileContent = readFile('jenkins/jenkins.properties')
-                    props.load(new StringReader(propsFileContent))
-                    env.NEWMAN_COLLECTION = props.getProperty('NEWMAN_COLLECTION')
-                    env.NEWMAN_ENVIRONMENT = props.getProperty('NEWMAN_ENVIRONMENT')
-                    env.LOCUST_PERF_FILE = props.getProperty('LOCUST_PERF_FILE')
-                    env.LOCUST_STRESS_FILE = props.getProperty('LOCUST_STRESS_FILE')
+                    def lines = propsFileContent.split('\r?\n')
+                    for (line in lines) {
+                        line = line.trim()
+                        if (line && !line.startsWith('#') && line.contains('=')) {
+                            def parts = line.split('=', 2)
+                            def key = parts[0].trim()
+                            def val = parts[1].trim()
+                            if (key == 'NEWMAN_COLLECTION') {
+                                env.NEWMAN_COLLECTION = val
+                            } else if (key == 'NEWMAN_ENVIRONMENT') {
+                                env.NEWMAN_ENVIRONMENT = val
+                            } else if (key == 'LOCUST_PERF_FILE') {
+                                env.LOCUST_PERF_FILE = val
+                            } else if (key == 'LOCUST_STRESS_FILE') {
+                                env.LOCUST_STRESS_FILE = val
+                            }
+                        }
+                    }
                 }
             }
         }
