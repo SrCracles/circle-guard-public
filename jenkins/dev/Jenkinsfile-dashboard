@@ -26,10 +26,7 @@ pipeline {
         }
         stage('SonarQube Analysis') {
             steps {
-                bat "start /B kubectl port-forward -n infra svc/sonarqube 9000:9000"
-                sleep time: 5, unit: 'SECONDS'
-                bat "docker run --rm -v \"%WORKSPACE%\\services\\%SERVICE_NAME%\":/usr/src sonarsource/sonar-scanner-cli -Dsonar.projectBaseDir=/usr/src -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.qualitygate.wait=true"
-                bat "taskkill /F /IM kubectl.exe || exit 0"
+                bat "docker run --rm -v \"%WORKSPACE%\\services\\%SERVICE_NAME%\":/usr/src sonarsource/sonar-scanner-cli -Dsonar.projectBaseDir=/usr/src -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.qualitygate.wait=true -Dsonar.login=admin -Dsonar.password=admin"
             }
         }
         stage('Build JAR') {

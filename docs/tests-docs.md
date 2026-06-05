@@ -133,3 +133,19 @@ Para garantizar que el código se mantiene con un estándar alto de calidad con 
 * **JaCoCo (Java Code Coverage)**: Configurado mediante un plugin en `build.gradle.kts`. Analiza la ejecución de las pruebas e instrumenta el código para generar métricas de cobertura. Hemos impuesto un límite de **60% de cobertura mínima de instrucciones**. Si la cobertura cae por debajo, el proceso de construcción fallará intencionalmente impidiendo que código sin testear llegue a etapas posteriores.
 * **SonarQube**: Se despliega en el namespace `infra` en nuestro clúster Kubernetes local. Después de correr las pruebas, Jenkins ejecuta `sonar-scanner-cli`, el cual recopila el reporte XML de JaCoCo y analiza el código en busca de code smells, vulnerabilidades y deuda técnica. Si las métricas no superan el **Quality Gate** de SonarQube, el pipeline falla.
 * **Tendencia en Jenkins**: El plugin de **Coverage** en Jenkins recibe el reporte generado para cada microservicio y dibuja el gráfico de tendencia en el dashboard del respectivo job, brindando visibilidad constante al equipo.
+
+---
+
+## 6. Infraestructura de Análisis Estático para Dev (Paralelismo)
+
+Para soportar la ejecución simultánea de los 8 pipelines de desarrollo sin conflictos de puertos ni credenciales dinámicas, se realizaron los siguientes ajustes:
+
+* **SonarQube expuesto vía NodePort**: El Service de SonarQube en `k8s/infra/sonarqube.yaml` se cambió de tipo `ClusterIP` a `NodePort` con `nodePort: 30090`, permitiendo acceso directo desde fuera del clúster sin necesidad de `kubectl port-forward`.
+* **Port mapping en Kind**: `setup-kind.ps1` ahora incluye un `extraPortMappings` que mapea `containerPort: 30090` -> `hostPort: 9000`, haciendo que SonarQube esté disponible en `localhost:9000` del host Windows tras crear el cluster.
+* **Autenticación básica en dev**: Los 8 Jenkinsfiles de dev (`jenkins/dev/Jenkinsfile-*`) se simplificaron eliminando:
+  - La variable `SONAR_CREDENTIALS_ID` y el bloque `withCredentials`.
+  - El `kubectl port-forward` y el `sleep` asociado.
+  - El cleanup de `kubectl.exe` en `post/always`.
+  - En su lugar, el scanner se conecta directamente a `http://host.docker.internal:9000` y usa `-Dsonar.login=admin -Dsonar.password=admin` (credenciales por defecto de la imagen `sonarqube:lts-community` en entornos de desarrollo).
+
+**Justificación**: Ejecutar 8 `port-forward` simultáneos al mismo puerto `9000` provocaba colisiones y fallos de `address already in use`. Además, el token de SonarQube no era estático porque la instancia se recrea con cada ejecución de `setup-kind.ps1`. Usar NodePort + autenticación básica elimina ambos problemas y permite escalar el número de pipelines en paralelo sin modificar Jenkins ni Kubernetes.
