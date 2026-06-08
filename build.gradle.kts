@@ -38,6 +38,7 @@ subprojects {
         "implementation"("org.jetbrains.kotlin:kotlin-reflect")
         "testImplementation"("org.springframework.boot:spring-boot-starter-test")
         "testRuntimeOnly"("com.h2database:h2")
+        "runtimeOnly"("org.flywaydb:flyway-database-postgresql") // Necesario desde Flyway 10.x para soportar PostgreSQL
     }
 
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
