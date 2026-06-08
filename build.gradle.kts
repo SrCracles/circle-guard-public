@@ -1,5 +1,5 @@
 plugins {
-    id("org.springframework.boot") version "3.2.4" apply false
+    id("org.springframework.boot") version "3.4.5" apply false
     id("io.spring.dependency-management") version "1.1.4" apply false
     kotlin("jvm") version "1.9.24" apply false
     kotlin("plugin.spring") version "1.9.24" apply false
@@ -10,9 +10,8 @@ allprojects {
     group = "com.circleguard"
     version = "1.0.0-SNAPSHOT"
 
-    // Forzar versiones seguras
-    extra["tomcat.version"] = "10.1.35"          // Resuelve CVEs de Tomcat
-    extra["spring-security.version"] = "6.3.4"   // Resuelve CVEs de Spring Security
+    extra["tomcat.version"] = "10.1.55"
+    extra["spring-security.version"] = "6.5.9"
 
     repositories {
         mavenCentral()
@@ -30,8 +29,8 @@ subprojects {
     }
 
     dependencies {
-        "implementation"(platform("org.springframework.boot:spring-boot-dependencies:3.2.4"))
-        "testImplementation"(platform("org.springframework.boot:spring-boot-dependencies:3.2.4"))
+        "implementation"(platform("org.springframework.boot:spring-boot-dependencies:3.4.5"))
+        "testImplementation"(platform("org.springframework.boot:spring-boot-dependencies:3.4.5"))
         "compileOnly"("org.projectlombok:lombok")
         "annotationProcessor"("org.projectlombok:lombok")
         "testCompileOnly"("org.projectlombok:lombok")
