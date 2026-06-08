@@ -18,6 +18,9 @@ catch { Write-Error "Kind not found. Please install Kind."; exit 1 }
 try { $null = Get-Command "kubectl" -ErrorAction Stop }
 catch { Write-Error "kubectl not found. Please install kubectl."; exit 1 }
 
+try { $null = Get-Command "trivy" -ErrorAction Stop }
+catch { Write-Error "Trivy not found. Please install Trivy."; exit 1 }
+
 try { docker info | Out-Null }
 catch { Write-Error "Docker daemon is not running. Start Docker Desktop first."; exit 1 }
 

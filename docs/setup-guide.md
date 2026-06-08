@@ -14,6 +14,7 @@ Instalar en el PC:
 - Jenkins (instalado nativamente, no en Docker)
 - PowerShell 7.0+
 - Java JDK 21 (para compilar los servicios)
+- Trivy (escaner de vulnerabilidades, debe estar en el PATH del sistema)
 
 ---
 
@@ -73,6 +74,7 @@ Estas variables centralizan la configuracion del proyecto. Solo se configuran un
 | `CG_DOCKER_USER` | `srcracles` | Usuario de DockerHub donde se suben las imagenes |
 | `CG_GITHUB_OWNER` | `SrCracles` | Owner del repositorio GitHub |
 | `CG_GITHUB_REPO` | `circle-guard-public` | Nombre del repositorio GitHub |
+| `CG_TRIVY_SEVERITY_FAIL` | `CRITICAL` | Severidad minima que falla el pipeline en el escaneo Trivy. Valores validos: `CRITICAL` (default) o `HIGH,CRITICAL` |
 
 > **Nota:** Los valores de la tabla son los defaults del proyecto. Si alguien hace un fork o trabaja con su propia cuenta de DockerHub, solo debe cambiar estos valores aqui, sin tocar ningun Jenkinsfile.
 

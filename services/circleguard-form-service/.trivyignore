@@ -1,0 +1,10 @@
+# Archivo de excepciones de Trivy para circleguard-form-service
+#
+# Formato: un CVE por linea, seguido de un comentario con la justificacion.
+# Ejemplo:
+# CVE-2023-XXXXX # Justificacion: no aplica porque el componente no esta expuesto a red externa
+#
+# Agregar aqui los CVEs conocidos y aceptados por el equipo de seguridad.
+# Toda excepcion debe tener una justificacion documentada y fecha de revision.
+#
+# Fecha de ultima revision: 2026-06-08

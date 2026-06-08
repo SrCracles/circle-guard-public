@@ -3,6 +3,7 @@ pipeline {
     environment {
         DOCKER_USER = "${env.CG_DOCKER_USER ?: 'srcracles'}"
         DOCKERHUB_CREDENTIALS_ID = "${env.CG_DOCKERHUB_CREDENTIALS_ID ?: 'dockerhub-credentials'}"
+        TRIVY_SEVERITY_FAIL = "${env.CG_TRIVY_SEVERITY_FAIL ?: 'CRITICAL'}"
         SERVICE_NAME = 'circleguard-identity-service'
         SERVICE_PORT = '8083'
         DOCKER_IMAGE = "${DOCKER_USER}/${SERVICE_NAME}"
@@ -37,6 +38,21 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 bat "docker build -t %DOCKER_IMAGE%:dev services/%SERVICE_NAME%/"
+            }
+        }
+        stage('Trivy Scan') {
+            steps {
+                // Reporte JSON completo (HIGH + CRITICAL) - se archiva como artefacto
+                bat(script: "trivy image --format json --output trivy-report.json --severity HIGH,CRITICAL --ignorefile services\\%SERVICE_NAME%\\.trivyignore --ignore-unfixed %DOCKER_IMAGE%:dev", returnStatus: true)
+                // Reporte tabla - severidad HIGH (informativo, no bloquea el pipeline)
+                bat(script: "trivy image --format table --severity HIGH --exit-code 0 --ignorefile services\\%SERVICE_NAME%\\.trivyignore --ignore-unfixed %DOCKER_IMAGE%:dev", returnStatus: true)
+                // Falla el pipeline si se detectan vulnerabilidades de severidad CRITICAL (configurable via CG_TRIVY_SEVERITY_FAIL)
+                bat "trivy image --format table --severity %TRIVY_SEVERITY_FAIL% --exit-code 1 --ignorefile services\\%SERVICE_NAME%\\.trivyignore --ignore-unfixed %DOCKER_IMAGE%:dev"
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-report.json', allowEmptyArchive: true
+                }
             }
         }
         stage('Push Docker Image (dev tag)') {
