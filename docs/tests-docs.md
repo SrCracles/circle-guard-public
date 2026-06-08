@@ -54,6 +54,8 @@ Las pruebas unitarias validan la lógica interna de cada componente aislando sus
 * **`AdminControllerTest`**: Pruebas de configuración del sistema (SystemSettings) y toggle de *unconfirmed fencing*.
 * **`MeshControllerTest`**: Pruebas de obtención de estadísticas de conexiones confirmadas y no confirmadas en la red de contactos.
 * **`BuildingServiceTest`**: Pruebas del ciclo de vida (CRUD) de los edificios, incluyendo validación de restricciones al intentar borrar edificios con pisos asociados.
+* **`AccessPointServiceTest`**: Pruebas unitarias de gestión del ciclo de vida (registro, actualización, búsqueda y borrado) de los puntos de acceso WiFi vinculados a pisos. **Importancia:** Los Access Points son la fuente primaria para el posicionamiento indoor y el trazado de contactos basado en proximidad.
+* **`CircleServiceTest`**: Pruebas unitarias sobre la lógica de creación, gestión de miembros y cercado (fencing) de círculos de contactos. **Importancia:** Garantiza que las agrupaciones sociales (círculos) funcionen y que la acción crítica de cercado promueva adecuadamente el riesgo de los usuarios involucrados.
 ### `circleguard-notification-service`
 * **`TemplateServiceTest`**: Renderizado de templates Freemarker con variables. **Importancia:** Probar el renderizado garantiza que los usuarios reciban mensajes con su estado correcto y enlaces funcionales, evitando confusion en momentos criticos de salud.
 * **`EmailServiceImplTest`**: Funcionalidad de Feature Toggle para el envío de correos. **Importancia:** Valida que el servicio respete la configuración dinámica para encender o apagar el envío de correos y registre adecuadamente la acción en la auditoría sin interrumpir el flujo principal.
