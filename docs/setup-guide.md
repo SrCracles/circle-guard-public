@@ -14,7 +14,7 @@ Instalar en el PC:
 - Jenkins (instalado nativamente, no en Docker)
 - PowerShell 7.0+
 - Java JDK 21 (para compilar los servicios)
-- Trivy (escaner de vulnerabilidades, debe estar en el PATH del sistema)
+- Trivy (escaner de vulnerabilidades, debe estar en el PATH del sistema, NO solo en el path del usuario)
 
 ---
 

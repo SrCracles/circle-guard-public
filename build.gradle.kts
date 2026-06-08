@@ -10,6 +10,10 @@ allprojects {
     group = "com.circleguard"
     version = "1.0.0-SNAPSHOT"
 
+    // Forzar versiones seguras
+    extra["tomcat.version"] = "10.1.35"          // Resuelve CVEs de Tomcat
+    extra["spring-security.version"] = "6.3.4"   // Resuelve CVEs de Spring Security
+
     repositories {
         mavenCentral()
     }
