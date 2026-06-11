@@ -11,6 +11,8 @@ Instalar en el PC:
 - Docker Desktop
 - Kind (Kubernetes in Docker)
 - kubectl
+- Terraform
+- Azure CLI
 - Jenkins (instalado nativamente, no en Docker)
 - PowerShell 7.0+
 - Java JDK 21 (para compilar los servicios)
@@ -33,6 +35,10 @@ Este script crea:
 - Exporta el kubeconfig a `kind-kubeconfig.yaml`
 
 Al finalizar, anotar la ruta del kubeconfig que muestra en pantalla.
+
+### Alternativa Cloud: Azure AKS con Terraform
+
+Para ejecutar los mismos flujos contra Kubernetes en Azure en vez de Kind, usar la guia [`docs/terraform-azure.md`](terraform-azure.md). Ese flujo crea AKS, namespaces e infraestructura base con Terraform y reemplaza el `KUBECONFIG` local por un kubeconfig de AKS para Jenkins.
 
 ---
 

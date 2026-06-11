@@ -49,3 +49,10 @@ neo4jdata/
 
 # Kind Cluster Kubeconfig (generated locally, do not commit)
 kind-kubeconfig.yaml
+
+# Terraform local state and working directories
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log

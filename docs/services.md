@@ -82,7 +82,17 @@ circle-guard-public/
 ├── docs/
 │   ├── services.md                    # Este documento
 │   ├── tests-docs.md                  # Documentación de Pruebas
+│   ├── terraform-azure.md             # Guia de despliegue cloud con Terraform y AKS
 │   └── pipeline-flow.md               # Flujo detallado de pipelines CI/CD
+├── terraform/
+│   ├── backend.tf                      # Backend remoto AzureRM para estado Terraform
+│   ├── modules/
+│   │   ├── aks/                        # Modulo de cluster AKS y recursos asociados
+│   │   └── infra/                      # Modulo de infraestructura Kubernetes
+│   └── envs/
+│       ├── dev/                        # tfvars y backend config de dev
+│       ├── stage/                      # tfvars y backend config de stage
+│       └── master/                     # tfvars y backend config de master
 ├── tests/
 │   ├── postman/
 │   │   ├── circle-guard-e2e-collection.json    # Coleccion de pruebas E2E para Newman

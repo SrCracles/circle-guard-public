@@ -6,6 +6,8 @@
 
 Este script PowerShell automatiza la creacion del entorno local de desarrollo para CircleGuard, preparando todo lo necesario para que los pipelines de Jenkins puedan ejecutarse correctamente.
 
+> Para el despliegue en Azure, la creacion del cluster, namespaces e infraestructura base ya no se hace con este script sino con Terraform. Ver [`docs/terraform-azure.md`](terraform-azure.md).
+
 ---
 
 ## Que Hace
@@ -155,3 +157,30 @@ Este script limpia todos los recursos desplegados en el cluster. Puede mantener 
 .\teardown-kind.ps1 -DeleteCluster -CleanDocker
 .\setup-kind.ps1
 ```
+
+---
+
+## Terraform Azure — Setup Cloud
+
+**Ubicacion:** `terraform/`
+
+La infraestructura cloud se define como codigo con Terraform:
+
+| Carpeta | Proposito |
+|---------|-----------|
+| `terraform/modules/aks` | Crea AKS y recursos asociados en Azure |
+| `terraform/modules/infra` | Despliega PostgreSQL, Kafka, Zookeeper, Redis, Neo4j, OpenLDAP y SonarQube en Kubernetes |
+| `terraform/envs/dev` | Configuracion y estado remoto de dev |
+| `terraform/envs/stage` | Configuracion y estado remoto de stage |
+| `terraform/envs/master` | Configuracion y estado remoto de master |
+
+Flujo basico:
+
+```powershell
+cd terraform
+terraform init -backend-config="envs/dev/backend.hcl" -reconfigure
+terraform plan -var-file="envs/dev/terraform.tfvars"
+terraform apply -var-file="envs/dev/terraform.tfvars"
+```
+
+Antes de ejecutar, configurar el backend Azure Storage y las variables sensibles `TF_VAR_postgres_password`, `TF_VAR_neo4j_password` y `TF_VAR_ldap_admin_password`.
