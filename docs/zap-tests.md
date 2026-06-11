@@ -59,10 +59,11 @@ Con el cluster Kind levantado y los servicios en `stage`:
 ```powershell
 kubectl run zap-scan --restart=Never --image=ghcr.io/zaproxy/zaproxy:stable -n stage --command -- sleep 3600
 kubectl wait --for=condition=ready pod/zap-scan -n stage --timeout=120s
-kubectl cp tests/zap/run-zap-scans.sh zap-scan:/zap/wrk/run-zap-scans.sh -n stage
-kubectl exec zap-scan -n stage -- chmod +x /zap/wrk/run-zap-scans.sh
-kubectl exec zap-scan -n stage -- /zap/wrk/run-zap-scans.sh
-kubectl cp zap-scan:/zap/wrk/reports/. zap-reports/ -n stage
+kubectl exec zap-scan -n stage -- mkdir -p /tmp/zap-reports
+kubectl cp tests/zap/run-zap-scans.sh zap-scan:/tmp/run-zap-scans.sh -n stage
+kubectl exec zap-scan -n stage -- chmod +x /tmp/run-zap-scans.sh
+kubectl exec zap-scan -n stage -- /tmp/run-zap-scans.sh
+kubectl cp zap-scan:/tmp/zap-reports/. zap-reports/ -n stage
 kubectl delete pod zap-scan -n stage
 ```
 

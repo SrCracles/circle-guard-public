@@ -4,7 +4,9 @@
 
 set -euo pipefail
 
-REPORT_DIR="/zap/wrk/reports"
+# /tmp is used because the pod overrides the image entrypoint with `sleep`;
+# in that mode /zap/wrk is not created by the ZAP image startup.
+REPORT_DIR="/tmp/zap-reports"
 SCAN_MINUTES="${ZAP_SCAN_MINUTES:-5}"
 
 mkdir -p "${REPORT_DIR}"

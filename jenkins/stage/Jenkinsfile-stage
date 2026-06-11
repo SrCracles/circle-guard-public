@@ -100,10 +100,11 @@ pipeline {
                 bat 'kubectl run zap-scan --restart=Never --image=ghcr.io/zaproxy/zaproxy:stable -n stage --command -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/zap-scan -n stage --timeout=120s'
                 bat 'ping 127.0.0.1 -n 6 > nul'
-                bat 'kubectl cp "%ZAP_SCAN_SCRIPT%" zap-scan:/zap/wrk/run-zap-scans.sh -n stage -c zap-scan'
-                bat 'kubectl exec zap-scan -n stage -c zap-scan -- chmod +x /zap/wrk/run-zap-scans.sh'
-                bat 'kubectl exec zap-scan -n stage -c zap-scan -- /zap/wrk/run-zap-scans.sh'
-                bat 'kubectl cp zap-scan:/zap/wrk/reports/. zap-reports/ -n stage -c zap-scan'
+                bat 'kubectl exec zap-scan -n stage -c zap-scan -- mkdir -p /tmp/zap-reports'
+                bat 'kubectl cp "%ZAP_SCAN_SCRIPT%" zap-scan:/tmp/run-zap-scans.sh -n stage -c zap-scan'
+                bat 'kubectl exec zap-scan -n stage -c zap-scan -- chmod +x /tmp/run-zap-scans.sh'
+                bat 'kubectl exec zap-scan -n stage -c zap-scan -- /tmp/run-zap-scans.sh'
+                bat 'kubectl cp zap-scan:/tmp/zap-reports/. zap-reports/ -n stage -c zap-scan'
                 bat 'kubectl delete pod zap-scan -n stage --ignore-not-found=true'
             }
             post {
