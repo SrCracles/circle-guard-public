@@ -162,14 +162,21 @@ Estas contrasenas las define el equipo. No salen de Azure ni del repositorio. So
 Crear las variables en la terminal antes de correr `terraform plan` o `terraform apply`:
 
 ```powershell
+cd terraform
+
 $env:TF_VAR_postgres_password = "CambiarPorUnPasswordPostgresSeguro"
 $env:TF_VAR_neo4j_password = "CambiarPorUnPasswordNeo4jSeguro"
 $env:TF_VAR_ldap_admin_password = "CambiarPorUnPasswordLdapSeguro"
+
+terraform plan -var-file="envs/stage/terraform.tfvars"
+terraform apply -var-file="envs/stage/terraform.tfvars"
 ```
 
 Terraform lee automaticamente cualquier variable de entorno que empiece por `TF_VAR_`. Por ejemplo, `TF_VAR_postgres_password` llena la variable Terraform `postgres_password`.
 
-### 3.2 Si ejecutas Terraform desde Jenkins
+Si el equipo va a seguir ejecutando `terraform plan` y `terraform apply` manualmente, esto es suficiente. No hace falta crear credenciales en Jenkins para estas contrasenas. Solo recordar que las variables `$env:TF_VAR_*` viven en la sesion actual de PowerShell; si se cierra la terminal, hay que definirlas otra vez antes del siguiente `plan/apply`.
+
+### 3.2 Solo si en el futuro ejecutas Terraform desde Jenkins
 
 Crear 3 credenciales en Jenkins:
 
