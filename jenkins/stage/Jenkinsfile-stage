@@ -25,6 +25,8 @@ pipeline {
                                 env.LOCUST_PERF_FILE = val
                             } else if (key == 'LOCUST_STRESS_FILE') {
                                 env.LOCUST_STRESS_FILE = val
+                            } else if (key == 'ZAP_SCAN_SCRIPT') {
+                                env.ZAP_SCAN_SCRIPT = val
                             }
                         }
                     }
@@ -88,6 +90,174 @@ pipeline {
             post {
                 always {
                     junit testResults: 'newman-report.xml', allowEmptyResults: true
+                }
+            }
+        }
+        stage('Security Scan - OWASP ZAP') {
+            steps {
+                echo 'Running OWASP ZAP baseline scans against auth, form, and gateway services...'
+                bat 'if not exist zap-reports mkdir zap-reports'
+                bat 'kubectl run zap-scan --restart=Never --image=ghcr.io/zaproxy/zaproxy:stable -n stage --command -- sleep 3600'
+                bat 'kubectl wait --for=condition=ready pod/zap-scan -n stage --timeout=120s'
+                bat 'ping 127.0.0.1 -n 6 > nul'
+                bat 'kubectl cp "%ZAP_SCAN_SCRIPT%" zap-scan:/zap/wrk/run-zap-scans.sh -n stage -c zap-scan'
+                bat 'kubectl exec zap-scan -n stage -c zap-scan -- chmod +x /zap/wrk/run-zap-scans.sh'
+                bat 'kubectl exec zap-scan -n stage -c zap-scan -- /zap/wrk/run-zap-scans.sh'
+                bat 'kubectl cp zap-scan:/zap/wrk/reports/. zap-reports/ -n stage -c zap-scan'
+                bat 'kubectl delete pod zap-scan -n stage --ignore-not-found=true'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap-reports/**/*', allowEmptyArchive: true
+                    script {
+                        try {
+                            publishHTML([
+                                allowMissing: true,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'zap-reports',
+                                reportFiles: 'zap-consolidated-report.html',
+                                reportName: 'OWASP ZAP Security Scan',
+                                reportTitles: 'CircleGuard ZAP Reports'
+                            ])
+                        } catch (Exception e) {
+                            echo "HTML Publisher plugin not available: ${e.message}"
+                        }
+                    }
+                }
+            }
+        }
+        stage('Evaluate ZAP Results') {
+            steps {
+                script {
+                    def classifyRisk = { alert ->
+                        def code = alert.riskcode?.toString() ?: ''
+                        def desc = alert.riskdesc?.toString() ?: ''
+                        def alertName = alert.name?.toString() ?: alert.alert?.toString() ?: 'Unknown'
+                        if (code == '4' || desc.toUpperCase().startsWith('CRITICAL')) {
+                            return [level: 'CRITICAL', name: alertName, desc: desc, pluginid: alert.pluginid]
+                        }
+                        if (code == '3' || desc.toUpperCase().startsWith('HIGH')) {
+                            return [level: 'HIGH', name: alertName, desc: desc, pluginid: alert.pluginid]
+                        }
+                        if (code == '2' || desc.toUpperCase().startsWith('MEDIUM')) {
+                            return [level: 'MEDIUM', name: alertName, desc: desc, pluginid: alert.pluginid]
+                        }
+                        if (code == '1' || desc.toUpperCase().startsWith('LOW')) {
+                            return [level: 'LOW', name: alertName, desc: desc, pluginid: alert.pluginid]
+                        }
+                        return [level: 'INFO', name: alertName, desc: desc, pluginid: alert.pluginid]
+                    }
+
+                    def extractAlerts = { json ->
+                        def alerts = []
+                        if (json.site instanceof List) {
+                            json.site.each { site ->
+                                if (site.alerts instanceof List) {
+                                    site.alerts.each { a -> alerts << a }
+                                }
+                            }
+                        }
+                        return alerts
+                    }
+
+                    def reportFiles = [
+                        [file: 'zap-reports/zap-auth-report.json', service: 'auth-service'],
+                        [file: 'zap-reports/zap-form-report.json', service: 'form-service'],
+                        [file: 'zap-reports/zap-gateway-report.json', service: 'gateway-service']
+                    ]
+
+                    def criticalAlerts = []
+                    def highAlerts = []
+                    def mediumAlerts = []
+                    def lowAlerts = []
+                    def summary = new StringBuilder()
+                    summary.append('# OWASP ZAP Security Scan Report (HU-22)\n\n')
+                    summary.append('## Policy\n')
+                    summary.append('- **CRITICAL / HIGH**: fail the pipeline\n')
+                    summary.append('- **MEDIUM / LOW**: documented below, do not block\n\n')
+
+                    reportFiles.each { entry ->
+                        if (!fileExists(entry.file)) {
+                            echo "WARN: ZAP report not found: ${entry.file}"
+                            summary.append("## ${entry.service}\n\n_Report not generated._\n\n")
+                            return
+                        }
+
+                        def json = readJSON file: entry.file
+                        def alerts = extractAlerts(json)
+                        def serviceCritical = []
+                        def serviceHigh = []
+                        def serviceMedium = []
+                        def serviceLow = []
+
+                        alerts.each { alert ->
+                            def classified = classifyRisk(alert)
+                            def item = "${entry.service}: ${classified.name} (${classified.desc})"
+                            switch (classified.level) {
+                                case 'CRITICAL':
+                                    serviceCritical << item
+                                    break
+                                case 'HIGH':
+                                    serviceHigh << item
+                                    break
+                                case 'MEDIUM':
+                                    serviceMedium << item
+                                    break
+                                case 'LOW':
+                                    serviceLow << item
+                                    break
+                            }
+                        }
+
+                        criticalAlerts.addAll(serviceCritical)
+                        highAlerts.addAll(serviceHigh)
+                        mediumAlerts.addAll(serviceMedium)
+                        lowAlerts.addAll(serviceLow)
+
+                        summary.append("## ${entry.service}\n\n")
+                        summary.append("| Severity | Count |\n|----------|-------|\n")
+                        summary.append("| CRITICAL | ${serviceCritical.size()} |\n")
+                        summary.append("| HIGH | ${serviceHigh.size()} |\n")
+                        summary.append("| MEDIUM | ${serviceMedium.size()} |\n")
+                        summary.append("| LOW | ${serviceLow.size()} |\n\n")
+
+                        if (serviceMedium) {
+                            summary.append('### Medium (documented, non-blocking)\n\n')
+                            serviceMedium.each { summary.append("- ${it}\n") }
+                            summary.append('\n')
+                        }
+                        if (serviceLow) {
+                            summary.append('### Low (documented, non-blocking)\n\n')
+                            serviceLow.each { summary.append("- ${it}\n") }
+                            summary.append('\n')
+                        }
+                    }
+
+                    summary.append('## Totals\n\n')
+                    summary.append("| Severity | Total |\n|----------|-------|\n")
+                    summary.append("| CRITICAL | ${criticalAlerts.size()} |\n")
+                    summary.append("| HIGH | ${highAlerts.size()} |\n")
+                    summary.append("| MEDIUM | ${mediumAlerts.size()} |\n")
+                    summary.append("| LOW | ${lowAlerts.size()} |\n\n")
+                    summary.append('## Artifacts\n\n')
+                    summary.append('- zap-reports/zap-*-report.html\n')
+                    summary.append('- zap-reports/zap-*-report.xml\n')
+                    summary.append('- zap-reports/zap-*-report.json\n')
+                    summary.append('- zap-reports/zap-consolidated-report.html\n')
+
+                    writeFile file: 'ZAP_SECURITY_REPORT.md', text: summary.toString()
+                    archiveArtifacts artifacts: 'ZAP_SECURITY_REPORT.md', allowEmptyArchive: true
+
+                    if (criticalAlerts || highAlerts) {
+                        def details = (criticalAlerts + highAlerts).join('\n- ')
+                        error("OWASP ZAP found blocking vulnerabilities:\n- ${details}")
+                    }
+
+                    echo 'OWASP ZAP scan passed: no HIGH or CRITICAL findings.'
+                    if (mediumAlerts || lowAlerts) {
+                        echo "Non-blocking findings documented: ${mediumAlerts.size()} MEDIUM, ${lowAlerts.size()} LOW"
+                    }
                 }
             }
         }

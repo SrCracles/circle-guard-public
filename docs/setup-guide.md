@@ -179,7 +179,7 @@ Una vez que todos terminen exitosamente, ejecutar:
 circle-guard-stage
 ```
 
-Si stage pasa (E2E + Locust), ejecutar:
+Si stage pasa (E2E + OWASP ZAP + Locust), ejecutar:
 
 ```
 circle-guard-master

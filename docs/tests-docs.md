@@ -120,7 +120,23 @@ Las pruebas residen en la carpeta `tests/postman/`:
 
 ---
 
-## 4. Pruebas de Rendimiento / Estrés (Locust)
+## 4. Pruebas de Seguridad (OWASP ZAP) — HU-22
+
+Las pruebas de seguridad se ejecutan en el pipeline **stage** después de los E2E y antes de Locust. Utilizan la imagen Docker `ghcr.io/zaproxy/zaproxy:stable` con `zap-baseline.py` contra:
+
+- `circleguard-auth-service:8180`
+- `circleguard-form-service:8086`
+- `circleguard-gateway-service:8087`
+
+**Reportes:** HTML, XML y JSON por servicio + `ZAP_SECURITY_REPORT.md` consolidado.
+
+**Política de fallo:** CRITICAL o HIGH bloquean el pipeline; MEDIUM y LOW se documentan sin bloquear.
+
+Ver detalle en [`docs/zap-tests.md`](zap-tests.md).
+
+---
+
+## 5. Pruebas de Rendimiento / Estrés (Locust)
 
 Las pruebas están configuradas utilizando `Locust` con base en el script de Python `tests/locustfile.py` (y sus variantes `locustfile-performance.py`, `locustfile-stress.py`). Además existe una prueba en Spring Boot en la suite `PromotionPerformanceTest`.
 
@@ -130,7 +146,7 @@ Las pruebas están configuradas utilizando `Locust` con base en el script de Pyt
 
 ---
 
-## 5. Cobertura de Pruebas y Análisis Estático
+## 6. Cobertura de Pruebas y Análisis Estático
 
 Para garantizar que el código se mantiene con un estándar alto de calidad con cada iteración, hemos integrado herramientas de análisis y cobertura en nuestros pipelines de Jenkins (HU-14 y HU-23):
 
@@ -140,7 +156,7 @@ Para garantizar que el código se mantiene con un estándar alto de calidad con 
 
 ---
 
-## 6. Infraestructura de Análisis Estático para Dev (Paralelismo)
+## 7. Infraestructura de Análisis Estático para Dev (Paralelismo)
 
 Para soportar la ejecución simultánea de los 8 pipelines de desarrollo sin conflictos de puertos ni credenciales dinámicas, se realizaron los siguientes ajustes:
 
