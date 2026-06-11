@@ -3,7 +3,7 @@ location            = "eastus"
 resource_group_name = "circleguard-dev-rg"
 
 aks_node_count      = 1
-aks_vm_size         = "Standard_B2ms"
+aks_vm_size         = "Standard_D2s_v7"
 aks_os_disk_size_gb = 64
 enable_auto_scaling = false
 
