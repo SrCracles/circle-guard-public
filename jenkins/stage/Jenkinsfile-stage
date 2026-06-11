@@ -97,6 +97,7 @@ pipeline {
             steps {
                 echo 'Running OWASP ZAP baseline scans against auth, form, and gateway services...'
                 bat 'if not exist zap-reports mkdir zap-reports'
+                bat 'kubectl delete pod zap-scan -n stage --ignore-not-found=true --force --grace-period=0'
                 bat 'kubectl run zap-scan --restart=Never --image=ghcr.io/zaproxy/zaproxy:stable -n stage --command -- sleep 3600'
                 bat 'kubectl wait --for=condition=ready pod/zap-scan -n stage --timeout=120s'
                 bat 'ping 127.0.0.1 -n 6 > nul'
