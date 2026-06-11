@@ -18,6 +18,16 @@ variable "infra_namespace" {
   type        = string
 }
 
+variable "sonarqube_namespace" {
+  description = "SonarQube namespace."
+  type        = string
+}
+
+variable "enable_shared_infra" {
+  description = "Deploy shared infrastructure services."
+  type        = bool
+}
+
 variable "enable_sonarqube" {
   description = "Deploy SonarQube."
   type        = bool

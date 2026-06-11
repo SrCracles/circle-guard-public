@@ -8,8 +8,8 @@ Terraform aprovisiona, por ambiente:
 
 - Un Resource Group de Azure.
 - Un cluster AKS con node pool configurable.
-- Los namespaces Kubernetes del ambiente y `infra`.
-- Los servicios de infraestructura que hoy existen en `k8s/infra`: PostgreSQL, Redis, Kafka, Zookeeper, Neo4j, OpenLDAP y SonarQube cuando aplique.
+- En `dev`: los namespaces `dev` y `sonarqube`; solo se despliega SonarQube.
+- En `stage` y `master`: el namespace del ambiente y `infra`; se despliegan PostgreSQL, Redis, Kafka, Zookeeper, Neo4j y OpenLDAP.
 - Estado remoto en Azure Storage con bloqueo por blob lease.
 
 La aplicacion sigue desplegandose con los manifiestos Kustomize existentes (`k8s/dev`, `k8s/stage`, `k8s/master`) desde Jenkins, pero `kubectl` ahora apunta a AKS en vez de Kind.
@@ -59,6 +59,16 @@ terraform/
 ```
 
 Cada ambiente usa el mismo root module y cambia solo `-backend-config` y `-var-file`. Esto evita duplicar codigo y mantiene estados separados.
+
+## Que crea cada ambiente
+
+| Ambiente | Namespaces | Servicios creados por Terraform |
+|----------|------------|----------------------------------|
+| `dev` | `dev`, `sonarqube` | SonarQube |
+| `stage` | `stage`, `infra` | PostgreSQL, Redis, Kafka, Zookeeper, Neo4j, OpenLDAP |
+| `master` | `master`, `infra` | PostgreSQL, Redis, Kafka, Zookeeper, Neo4j, OpenLDAP |
+
+En `dev` no se crea `infra` porque los pipelines de desarrollo solo necesitan compilar, probar, publicar imagenes y validar SonarQube. Las dependencias completas quedan para `stage` y `master`, donde se ejecutan despliegues integrados.
 
 ## Paso 1: Preparar Azure
 
@@ -145,15 +155,55 @@ Por eso un `apply` de `dev` no modifica el estado de `stage` ni `master`.
 
 ## Paso 3: Variables sensibles
 
-Las credenciales no estan hardcodeadas en Terraform ni en `terraform.tfvars`. Definirlas por variables de entorno antes de ejecutar `plan` o `apply`:
+Estas contrasenas las define el equipo. No salen de Azure ni del repositorio. Son las claves que usaran los servicios internos cuando Terraform cree PostgreSQL, Neo4j y OpenLDAP en Kubernetes.
+
+### 3.1 Si ejecutas Terraform desde tu terminal
+
+Crear las variables en la terminal antes de correr `terraform plan` o `terraform apply`:
 
 ```powershell
-$env:TF_VAR_postgres_password = "<password-postgres>"
-$env:TF_VAR_neo4j_password = "<password-neo4j>"
-$env:TF_VAR_ldap_admin_password = "<password-openldap>"
+$env:TF_VAR_postgres_password = "CambiarPorUnPasswordPostgresSeguro"
+$env:TF_VAR_neo4j_password = "CambiarPorUnPasswordNeo4jSeguro"
+$env:TF_VAR_ldap_admin_password = "CambiarPorUnPasswordLdapSeguro"
 ```
 
-En Jenkins se deben configurar como credenciales o variables protegidas y exponerlas como `TF_VAR_postgres_password`, `TF_VAR_neo4j_password` y `TF_VAR_ldap_admin_password`.
+Terraform lee automaticamente cualquier variable de entorno que empiece por `TF_VAR_`. Por ejemplo, `TF_VAR_postgres_password` llena la variable Terraform `postgres_password`.
+
+### 3.2 Si ejecutas Terraform desde Jenkins
+
+Crear 3 credenciales en Jenkins:
+
+1. Entrar a **Manage Jenkins > Credentials > System > Global credentials**.
+2. Hacer clic en **Add Credentials**.
+3. Crear cada una como **Kind: Secret text**.
+4. Usar estos IDs:
+
+| Jenkins Credential ID | Valor que guardas ahi |
+|-----------------------|------------------------|
+| `tf-postgres-password` | Password que quieres para PostgreSQL |
+| `tf-neo4j-password` | Password que quieres para Neo4j |
+| `tf-ldap-admin-password` | Password que quieres para OpenLDAP |
+
+Luego, el Jenkinsfile que ejecute Terraform debe tomar esas credenciales y convertirlas en variables `TF_VAR_*`:
+
+```groovy
+withCredentials([
+    string(credentialsId: 'tf-postgres-password', variable: 'TF_VAR_postgres_password'),
+    string(credentialsId: 'tf-neo4j-password', variable: 'TF_VAR_neo4j_password'),
+    string(credentialsId: 'tf-ldap-admin-password', variable: 'TF_VAR_ldap_admin_password')
+]) {
+    bat 'terraform plan -var-file="envs/stage/terraform.tfvars"'
+    bat 'terraform apply -var-file="envs/stage/terraform.tfvars"'
+}
+```
+
+En resumen: Jenkins guarda el secreto con un ID, el Jenkinsfile lo lee con `withCredentials`, y Terraform lo recibe porque la variable se llama `TF_VAR_<nombre_variable_terraform>`.
+
+Reglas claras:
+
+- Para `dev`, esas variables pueden omitirse si solo se despliega SonarQube (`enable_shared_infra = false`).
+- Para `stage` y `master`, son obligatorias porque se despliega PostgreSQL, Neo4j y OpenLDAP.
+- No deben escribirse en `terraform.tfvars`, ni en `.tf`, ni en documentación con valores reales.
 
 ## Paso 4: Inicializar y planear
 
@@ -194,7 +244,7 @@ Al finalizar:
 terraform output aks_get_credentials_command
 az aks get-credentials --resource-group circleguard-dev-rg --name circleguard-dev-aks --overwrite-existing
 kubectl get namespaces
-kubectl get pods -n infra
+kubectl get pods -n sonarqube
 ```
 
 Para liberar costos:
@@ -206,6 +256,8 @@ terraform destroy -var-file="envs/dev/terraform.tfvars"
 ## Paso 6: Conectar Jenkins a AKS
 
 El cambio principal frente a Kind es el kubeconfig. Jenkins ya ejecuta `kubectl apply -k ...`; ahora ese `kubectl` debe apuntar al cluster AKS del ambiente.
+
+`KUBECONFIG` tiene el mismo nombre en todos los casos porque es la variable estandar que lee `kubectl`. Lo que cambia es su valor segun el job. No se crean variables llamadas `KUBECONFIG_DEV`, `KUBECONFIG_STAGE` y `KUBECONFIG_MASTER` porque `kubectl` no las lee automaticamente.
 
 Generar un kubeconfig por ambiente:
 
@@ -231,9 +283,19 @@ az aks get-credentials `
 
 En Jenkins:
 
-- Jobs dev: `KUBECONFIG=<ruta>\aks-dev-kubeconfig.yaml`
-- Job stage: `KUBECONFIG=<ruta>\aks-stage-kubeconfig.yaml`
-- Job master: `KUBECONFIG=<ruta>\aks-master-kubeconfig.yaml`
+- En cada job dev, configurar `KUBECONFIG=<ruta>\aks-dev-kubeconfig.yaml`.
+- En el job stage, configurar `KUBECONFIG=<ruta>\aks-stage-kubeconfig.yaml`.
+- En el job master, configurar `KUBECONFIG=<ruta>\aks-master-kubeconfig.yaml`.
+
+Esto se puede hacer de dos formas:
+
+1. Manualmente en Jenkins: entrar a cada job, ir a **Configure > Build Environment > Inject environment variables** o usar las variables del pipeline/job, y definir `KUBECONFIG` con la ruta correspondiente.
+2. Recomendado para el proyecto: usar credenciales tipo secret file en Jenkins:
+   - `aks-dev-kubeconfig`
+   - `aks-stage-kubeconfig`
+   - `aks-master-kubeconfig`
+
+Con la opcion recomendada, cada Jenkinsfile toma su kubeconfig como archivo secreto y lo expone con el nombre estandar `KUBECONFIG` solo durante la ejecucion del job. Asi no hay que cambiar manualmente una variable global antes de correr dev, stage o master.
 
 Los Jenkinsfiles existentes pueden seguir usando:
 
@@ -249,7 +311,8 @@ La diferencia es que esos comandos se ejecutan contra AKS.
 ```powershell
 kubectl get nodes
 kubectl get namespaces
-kubectl get pods -n infra
+kubectl get pods -n sonarqube # dev
+kubectl get pods -n infra     # stage/master
 kubectl get svc -n infra
 kubectl logs -n infra -l app=kafka
 ```
@@ -260,6 +323,6 @@ Para validar el bloqueo de estado, iniciar un `terraform apply` y lanzar otro de
 
 - AKS control plane en tier Free no cobra por el control plane, pero los nodos si consumen credito.
 - Los `terraform.tfvars` usan `Standard_B2ms` para soportar Kafka, Neo4j y PostgreSQL con memoria razonable.
-- `dev` habilita SonarQube; `stage` y `master` lo deshabilitan para ahorrar credito.
+- `dev` habilita solo SonarQube; `stage` y `master` habilitan la infraestructura compartida completa.
 - La infraestructura de datos usa volumen efimero igual que los manifiestos locales actuales. Para produccion real se debe migrar PostgreSQL, Redis, Kafka y Neo4j a almacenamiento persistente o servicios administrados.
 - El backend remoto queda fuera de los resource groups de ambientes para no destruir el estado al ejecutar `terraform destroy`.

@@ -3,7 +3,9 @@ locals {
   resource_group_name = coalesce(var.resource_group_name, "${local.name_prefix}-rg")
   aks_dns_prefix      = coalesce(var.aks_dns_prefix, "${local.name_prefix}-aks")
   app_namespace       = var.environment
-  namespaces          = distinct(concat([local.app_namespace, var.infra_namespace], var.extra_namespaces))
+  infra_namespaces    = var.enable_shared_infra ? [var.infra_namespace] : []
+  sonar_namespaces    = var.enable_sonarqube ? [var.sonarqube_namespace] : []
+  namespaces          = distinct(concat([local.app_namespace], local.infra_namespaces, local.sonar_namespaces, var.extra_namespaces))
 
   common_tags = merge(
     {
@@ -48,6 +50,8 @@ module "infra" {
   namespaces          = local.namespaces
   app_namespace       = local.app_namespace
   infra_namespace     = var.infra_namespace
+  sonarqube_namespace = var.sonarqube_namespace
+  enable_shared_infra = var.enable_shared_infra
   enable_sonarqube    = var.enable_sonarqube
   replicas            = var.infra_replicas
   postgres_username   = var.postgres_username

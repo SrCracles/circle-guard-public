@@ -83,14 +83,26 @@ variable "infra_namespace" {
   default     = "infra"
 }
 
+variable "sonarqube_namespace" {
+  description = "Kubernetes namespace for SonarQube."
+  type        = string
+  default     = "sonarqube"
+}
+
 variable "extra_namespaces" {
   description = "Additional namespaces to create in the AKS cluster."
   type        = list(string)
   default     = []
 }
 
+variable "enable_shared_infra" {
+  description = "Deploy shared infrastructure services: PostgreSQL, Redis, Kafka, Zookeeper, Neo4j and OpenLDAP."
+  type        = bool
+  default     = true
+}
+
 variable "enable_sonarqube" {
-  description = "Deploy SonarQube in the infra namespace."
+  description = "Deploy SonarQube."
   type        = bool
   default     = true
 }
@@ -136,6 +148,7 @@ variable "postgres_password" {
   description = "PostgreSQL admin password. Set with TF_VAR_postgres_password."
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "neo4j_username" {
@@ -148,6 +161,7 @@ variable "neo4j_password" {
   description = "Neo4j password. Set with TF_VAR_neo4j_password."
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "ldap_organisation" {
@@ -166,6 +180,7 @@ variable "ldap_admin_password" {
   description = "OpenLDAP admin password. Set with TF_VAR_ldap_admin_password."
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "tags" {

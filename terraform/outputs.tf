@@ -24,6 +24,6 @@ output "kubernetes_namespaces" {
 }
 
 output "infra_service_names" {
-  description = "Infrastructure services created in the infra namespace."
+  description = "Support services created by Terraform."
   value       = module.infra.service_names
 }

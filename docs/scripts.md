@@ -169,10 +169,10 @@ La infraestructura cloud se define como codigo con Terraform:
 | Carpeta | Proposito |
 |---------|-----------|
 | `terraform/modules/aks` | Crea AKS y recursos asociados en Azure |
-| `terraform/modules/infra` | Despliega PostgreSQL, Kafka, Zookeeper, Redis, Neo4j, OpenLDAP y SonarQube en Kubernetes |
-| `terraform/envs/dev` | Configuracion y estado remoto de dev |
-| `terraform/envs/stage` | Configuracion y estado remoto de stage |
-| `terraform/envs/master` | Configuracion y estado remoto de master |
+| `terraform/modules/infra` | Despliega SonarQube o infraestructura compartida segun el ambiente |
+| `terraform/envs/dev` | Configuracion y estado remoto de dev; crea `dev` + `sonarqube` |
+| `terraform/envs/stage` | Configuracion y estado remoto de stage; crea `stage` + `infra` |
+| `terraform/envs/master` | Configuracion y estado remoto de master; crea `master` + `infra` |
 
 Flujo basico:
 
@@ -183,4 +183,4 @@ terraform plan -var-file="envs/dev/terraform.tfvars"
 terraform apply -var-file="envs/dev/terraform.tfvars"
 ```
 
-Antes de ejecutar, configurar el backend Azure Storage y las variables sensibles `TF_VAR_postgres_password`, `TF_VAR_neo4j_password` y `TF_VAR_ldap_admin_password`.
+Antes de ejecutar, configurar el backend Azure Storage. Las variables sensibles `TF_VAR_postgres_password`, `TF_VAR_neo4j_password` y `TF_VAR_ldap_admin_password` son obligatorias para `stage` y `master`; en `dev` se pueden omitir porque no se despliega la infraestructura compartida.

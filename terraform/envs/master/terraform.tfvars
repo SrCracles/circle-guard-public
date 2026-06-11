@@ -9,9 +9,11 @@ enable_auto_scaling = true
 aks_min_count       = 1
 aks_max_count       = 2
 
-infra_namespace  = "infra"
-extra_namespaces = []
-enable_sonarqube = false
+infra_namespace     = "infra"
+sonarqube_namespace = "sonarqube"
+extra_namespaces    = []
+enable_shared_infra = true
+enable_sonarqube    = false
 
 infra_replicas = {
   postgresql = 1

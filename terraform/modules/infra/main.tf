@@ -23,6 +23,8 @@ resource "kubernetes_namespace_v1" "managed" {
 }
 
 resource "kubernetes_secret_v1" "infra" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "circleguard-infra-secrets"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -41,6 +43,8 @@ resource "kubernetes_secret_v1" "infra" {
 }
 
 resource "kubernetes_config_map_v1" "postgres_init" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "postgres-init"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -57,6 +61,8 @@ resource "kubernetes_config_map_v1" "postgres_init" {
 }
 
 resource "kubernetes_deployment_v1" "postgresql" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "postgresql"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -99,7 +105,7 @@ resource "kubernetes_deployment_v1" "postgresql" {
             name = "POSTGRES_PASSWORD"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret_v1.infra.metadata[0].name
+                name = kubernetes_secret_v1.infra[0].metadata[0].name
                 key  = "POSTGRES_PASSWORD"
               }
             }
@@ -129,7 +135,7 @@ resource "kubernetes_deployment_v1" "postgresql" {
         volume {
           name = "init-sql"
           config_map {
-            name = kubernetes_config_map_v1.postgres_init.metadata[0].name
+            name = kubernetes_config_map_v1.postgres_init[0].metadata[0].name
           }
         }
       }
@@ -138,6 +144,8 @@ resource "kubernetes_deployment_v1" "postgresql" {
 }
 
 resource "kubernetes_service_v1" "postgresql" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "postgresql"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -162,6 +170,8 @@ resource "kubernetes_service_v1" "postgresql" {
 }
 
 resource "kubernetes_service_v1" "zookeeper" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "zookeeper"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -186,6 +196,8 @@ resource "kubernetes_service_v1" "zookeeper" {
 }
 
 resource "kubernetes_stateful_set_v1" "zookeeper" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "zookeeper"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -195,7 +207,7 @@ resource "kubernetes_stateful_set_v1" "zookeeper" {
   }
 
   spec {
-    service_name = kubernetes_service_v1.zookeeper.metadata[0].name
+    service_name = kubernetes_service_v1.zookeeper[0].metadata[0].name
     replicas     = var.replicas.zookeeper
 
     selector {
@@ -238,6 +250,8 @@ resource "kubernetes_stateful_set_v1" "zookeeper" {
 }
 
 resource "kubernetes_service_v1" "kafka" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "kafka"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -262,6 +276,8 @@ resource "kubernetes_service_v1" "kafka" {
 }
 
 resource "kubernetes_stateful_set_v1" "kafka" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "kafka"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -271,7 +287,7 @@ resource "kubernetes_stateful_set_v1" "kafka" {
   }
 
   spec {
-    service_name = kubernetes_service_v1.kafka.metadata[0].name
+    service_name = kubernetes_service_v1.kafka[0].metadata[0].name
     replicas     = var.replicas.kafka
 
     selector {
@@ -339,6 +355,8 @@ resource "kubernetes_stateful_set_v1" "kafka" {
 }
 
 resource "kubernetes_deployment_v1" "redis" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "redis"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -378,6 +396,8 @@ resource "kubernetes_deployment_v1" "redis" {
 }
 
 resource "kubernetes_service_v1" "redis" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "redis"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -402,6 +422,8 @@ resource "kubernetes_service_v1" "redis" {
 }
 
 resource "kubernetes_deployment_v1" "neo4j" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "neo4j"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -443,7 +465,7 @@ resource "kubernetes_deployment_v1" "neo4j" {
             name = "NEO4J_AUTH"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret_v1.infra.metadata[0].name
+                name = kubernetes_secret_v1.infra[0].metadata[0].name
                 key  = "NEO4J_AUTH"
               }
             }
@@ -475,6 +497,8 @@ resource "kubernetes_deployment_v1" "neo4j" {
 }
 
 resource "kubernetes_service_v1" "neo4j" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "neo4j"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -505,6 +529,8 @@ resource "kubernetes_service_v1" "neo4j" {
 }
 
 resource "kubernetes_deployment_v1" "openldap" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "openldap"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -556,7 +582,7 @@ resource "kubernetes_deployment_v1" "openldap" {
             name = "LDAP_ADMIN_PASSWORD"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret_v1.infra.metadata[0].name
+                name = kubernetes_secret_v1.infra[0].metadata[0].name
                 key  = "LDAP_ADMIN_PASSWORD"
               }
             }
@@ -568,6 +594,8 @@ resource "kubernetes_deployment_v1" "openldap" {
 }
 
 resource "kubernetes_service_v1" "openldap" {
+  count = var.enable_shared_infra ? 1 : 0
+
   metadata {
     name      = "openldap"
     namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
@@ -602,7 +630,7 @@ resource "kubernetes_deployment_v1" "sonarqube" {
 
   metadata {
     name      = "sonarqube"
-    namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
+    namespace = kubernetes_namespace_v1.managed[var.sonarqube_namespace].metadata[0].name
     labels = merge(local.labels, {
       app = "sonarqube"
     })
@@ -659,7 +687,7 @@ resource "kubernetes_service_v1" "sonarqube" {
 
   metadata {
     name      = "sonarqube"
-    namespace = kubernetes_namespace_v1.managed[var.infra_namespace].metadata[0].name
+    namespace = kubernetes_namespace_v1.managed[var.sonarqube_namespace].metadata[0].name
     labels = merge(local.labels, {
       app = "sonarqube"
     })

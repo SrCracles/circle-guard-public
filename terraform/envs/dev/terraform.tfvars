@@ -7,17 +7,19 @@ aks_vm_size         = "Standard_B2ms"
 aks_os_disk_size_gb = 64
 enable_auto_scaling = false
 
-infra_namespace  = "infra"
-extra_namespaces = []
-enable_sonarqube = true
+infra_namespace     = "infra"
+sonarqube_namespace = "sonarqube"
+extra_namespaces    = []
+enable_shared_infra = false
+enable_sonarqube    = true
 
 infra_replicas = {
-  postgresql = 1
-  zookeeper  = 1
-  kafka      = 1
-  redis      = 1
-  neo4j      = 1
-  openldap   = 1
+  postgresql = 0
+  zookeeper  = 0
+  kafka      = 0
+  redis      = 0
+  neo4j      = 0
+  openldap   = 0
   sonarqube  = 1
 }
 
