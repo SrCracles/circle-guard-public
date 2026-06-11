@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/bin/sh
 # OWASP ZAP baseline scans for CircleGuard stage environment (runs inside ZAP Docker image).
 # Targets: auth-service, form-service, gateway-service (HU-22).
 
-set -euo pipefail
+set -eu
 
 # /tmp is used because the pod overrides the image entrypoint with `sleep`;
 # in that mode /zap/wrk is not created by the ZAP image startup.
@@ -11,13 +11,11 @@ SCAN_MINUTES="${ZAP_SCAN_MINUTES:-5}"
 
 mkdir -p "${REPORT_DIR}"
 
-TARGETS=(
-  "auth|http://circleguard-auth-service:8180"
-  "form|http://circleguard-form-service:8086"
+for entry in \
+  "auth|http://circleguard-auth-service:8180" \
+  "form|http://circleguard-form-service:8086" \
   "gateway|http://circleguard-gateway-service:8087"
-)
-
-for entry in "${TARGETS[@]}"; do
+do
   name="${entry%%|*}"
   url="${entry#*|}"
 

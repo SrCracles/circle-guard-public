@@ -102,8 +102,7 @@ pipeline {
                 bat 'ping 127.0.0.1 -n 6 > nul'
                 bat 'kubectl exec zap-scan -n stage -c zap-scan -- mkdir -p /tmp/zap-reports'
                 bat 'kubectl cp "%ZAP_SCAN_SCRIPT%" zap-scan:/tmp/run-zap-scans.sh -n stage -c zap-scan'
-                bat 'kubectl exec zap-scan -n stage -c zap-scan -- chmod +x /tmp/run-zap-scans.sh'
-                bat 'kubectl exec zap-scan -n stage -c zap-scan -- /tmp/run-zap-scans.sh'
+                bat 'kubectl exec zap-scan -n stage -c zap-scan -- sh /tmp/run-zap-scans.sh'
                 bat 'kubectl cp zap-scan:/tmp/zap-reports/. zap-reports/ -n stage -c zap-scan'
                 bat 'kubectl delete pod zap-scan -n stage --ignore-not-found=true'
             }
