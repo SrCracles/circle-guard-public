@@ -81,9 +81,9 @@ circle-guard-public/
 ├── setup-kind.ps1                     # Script para crear cluster Kind + namespaces + infra
 ├── docs/
 │   ├── services.md                    # Este documento
+│   ├── branching-strategy.md          # Estrategia de ramas, commits y tags Docker (HU-02)
 │   ├── tests-docs.md                  # Documentación de Pruebas
-│   ├── terraform-azure.md             # Guia de despliegue cloud con Terraform y AKS
-│   └── pipeline-flow.md               # Flujo detallado de pipelines CI/CD
+│   └── terraform-azure.md             # Guia de despliegue cloud con Terraform y AKS
 ├── terraform/
 │   ├── backend.tf                      # Backend remoto AzureRM para estado Terraform
 │   ├── modules/
@@ -183,7 +183,8 @@ circle-guard-public/
 | **Registry de Imagenes** | DockerHub (usuario: `srcracles`) |
 | **E2E Testing** | Newman CLI con colecciones Postman |
 | **Performance Testing** | Locust (Python) |
-| **Estrategia de Tags** | `dev` -> `stage` -> `vX.Y.Z` y `master`. Dev compila y pushea `:dev`. Stage prueba y promueve a `:stage`. Master calcula version semantica, pushea tags inmutables (`:vX.Y.Z`) y mutables (`:master`), y deploya en K8s. |
+| **Estrategia de Tags** | `dev` -> `stage` -> `vX.Y.Z` y `master`. Dev compila y pushea `:dev`. Stage prueba y promueve a `:stage`. Master calcula version semantica, pushea tags inmutables (`:vX.Y.Z`) y mutables (`:master`), y deploya en K8s. Ver [`docs/branching-strategy.md`](branching-strategy.md). |
+| **Estrategia de Branching** | Ramas permanentes `develop`, `stage`, `master`; ramas temporales `feature/`, `fix/`, `hotfix/`, `docs/`, `test/`, `infra/`. Conventional Commits. Ver [`docs/branching-strategy.md`](branching-strategy.md). |
 | **Release Notes** | GitHub API con token personal |
 | **Permisos Jenkins** | Usuario `jenkins` con acceso a `kubeconfig` y permisos adecuados |
 

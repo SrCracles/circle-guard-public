@@ -146,7 +146,7 @@ En la configuracion del pipeline, bajar hasta la seccion **Pipeline** y seleccio
 - **Definition:** Pipeline script from SCM
 - **SCM:** Git
 - **Repository URL:** `https://github.com/SrCracles/circle-guard-public.git`
-- **Branch:** `*/master`
+- **Branch:** `*/develop` (ver [`docs/branching-strategy.md`](branching-strategy.md))
 - **Script Path:** `jenkins/dev/Jenkinsfile-auth`
 
 Guardar.
@@ -169,12 +169,16 @@ Repetir el paso anterior para cada servicio. La unica diferencia es el **Script 
 ### 3.3 Pipeline Stage
 
 - **Nombre:** `circle-guard-stage`
+- **Branch:** `*/stage`
 - **Script Path:** `jenkins/stage/Jenkinsfile-stage`
 
 ### 3.4 Pipeline Master
 
 - **Nombre:** `circle-guard-master`
+- **Branch:** `*/master`
 - **Script Path:** `jenkins/master/Jenkinsfile-master`
+
+> **Ramas permanentes:** `develop`, `stage` y `master` deben existir en el repositorio y alinearse con los jobs anteriores. Ver [`docs/branching-strategy.md`](branching-strategy.md) para prefijos de ramas temporales, Conventional Commits y flujo feature → master.
 
 ---
 
