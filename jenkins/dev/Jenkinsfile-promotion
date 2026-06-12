@@ -14,9 +14,9 @@ pipeline {
                 checkout scm
             }
         }
-        // TEMP (HU-30/32 ELK): quality gates deshabilitados para acelerar build/push
-        /*
+        // TEMP (HU-30/32 ELK): cambiar expression { false } por { true } para restaurar quality gates
         stage('Test') {
+            when { expression { false } }
             steps {
                 bat '.\\gradlew.bat --no-daemon :services:%SERVICE_NAME%:test jacocoTestCoverageVerification'
             }
@@ -28,11 +28,11 @@ pipeline {
             }
         }
         stage('SonarQube Analysis') {
+            when { expression { false } }
             steps {
                 bat "docker run --rm -v \"%WORKSPACE%\\services\\%SERVICE_NAME%\":/usr/src sonarsource/sonar-scanner-cli -Dsonar.projectBaseDir=/usr/src -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.qualitygate.wait=true -Dsonar.login=admin -Dsonar.password=admin"
             }
         }
-        */
         stage('Build JAR') {
             steps {
                 bat '.\\gradlew.bat --no-daemon :services:%SERVICE_NAME%:bootJar'
@@ -43,8 +43,8 @@ pipeline {
                 bat "docker build -t %DOCKER_IMAGE%:dev services/%SERVICE_NAME%/"
             }
         }
-        /*
         stage('Trivy Scan') {
+            when { expression { false } }
             steps {
                 // Reporte JSON completo (HIGH + CRITICAL) - se archiva como artefacto
                 bat(script: "trivy image --format json --output trivy-report.json --severity HIGH,CRITICAL --ignorefile services\\%SERVICE_NAME%\\.trivyignore --ignore-unfixed %DOCKER_IMAGE%:dev", returnStatus: true)
@@ -59,7 +59,6 @@ pipeline {
                 }
             }
         }
-        */
         stage('Push Docker Image (dev tag)') {
             steps {
                 withDockerRegistry([credentialsId: env.DOCKERHUB_CREDENTIALS_ID, url: '']) {

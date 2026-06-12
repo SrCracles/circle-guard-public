@@ -75,8 +75,7 @@ pipeline {
                 }
             }
         }
-        // TEMP (HU-30/32 ELK): pruebas y quality gates deshabilitados; solo deploy para validar logs/trazas
-        /*
+        // E2E Newman: ACTIVO — genera trafico multi-servicio para validar trazas Jaeger y logs ELK (HU-30/32)
         stage('E2E Tests - Newman') {
             steps {
                 echo 'Running Newman E2E tests inside Kubernetes cluster...'
@@ -96,6 +95,7 @@ pipeline {
             }
         }
         stage('Security Scan - OWASP ZAP') {
+            when { expression { false } }
             steps {
                 echo 'Running OWASP ZAP baseline scans against auth, form, and gateway services...'
                 bat 'if not exist zap-reports mkdir zap-reports'
@@ -131,6 +131,7 @@ pipeline {
             }
         }
         stage('Evaluate ZAP Results') {
+            when { expression { false } }
             steps {
                 script {
                     def classifyRisk = { alert ->
@@ -265,6 +266,7 @@ pipeline {
             }
         }
         stage('Performance Test - Locust') {
+            when { expression { false } }
             steps {
                 echo 'Running Locust performance test inside Kubernetes cluster (with Prometheus exporter)...'
                 bat 'kubectl delete -f k8s/stage/locust-metrics.yaml --ignore-not-found=true'
@@ -286,6 +288,7 @@ pipeline {
             }
         }
         stage('Stress Test - Locust') {
+            when { expression { false } }
             steps {
                 echo 'Running Locust stress test inside Kubernetes cluster...'
                 bat 'kubectl run locust-stress --restart=Never --image=locustio/locust:2.29.0 -n stage --command -- sleep 3600'
@@ -305,6 +308,7 @@ pipeline {
             }
         }
         stage('Generate Performance Report') {
+            when { expression { false } }
             steps {
                 script {
                     def perfStats = ""
@@ -350,6 +354,7 @@ ${stressStats}
             }
         }
         stage('Promote dev to stage tag') {
+            when { expression { false } }
             steps {
                 script {
                     def services = [
@@ -371,7 +376,6 @@ ${stressStats}
                 }
             }
         }
-        */
     }
     post {
         failure {
@@ -382,30 +386,30 @@ ${stressStats}
             // TEMP (HU-30/32 ELK): mantener stage desplegado para validar logs en Kibana y trazas en Jaeger
             echo 'Stage pipeline succeeded. Stage namespace left running for ELK/Jaeger validation.'
             echo 'Manual cleanup when done: kubectl delete deployment,service,configmap,secret --all -n stage'
-            /*
-            echo 'Stage pipeline succeeded. Cleaning up stage resources and local images...'
-            bat 'kubectl delete deployment --all -n stage --ignore-not-found=true'
-            bat 'kubectl delete service --all -n stage --ignore-not-found=true'
-            bat 'kubectl delete configmap --all -n stage --ignore-not-found=true'
-            bat 'kubectl delete secret --all -n stage --ignore-not-found=true'
-            bat 'kubectl delete pod --all -n stage --force --grace-period=0 --ignore-not-found=true'
             script {
-                def services = [
-                    'circleguard-auth-service',
-                    'circleguard-identity-service',
-                    'circleguard-form-service',
-                    'circleguard-promotion-service',
-                    'circleguard-notification-service',
-                    'circleguard-gateway-service',
-                    'circleguard-file-service',
-                    'circleguard-dashboard-service'
-                ]
-                for (svc in services) {
-                    bat "docker rmi ${DOCKER_USER}/${svc}:dev 2>nul || exit 0"
-                    bat "docker rmi ${DOCKER_USER}/${svc}:stage 2>nul || exit 0"
+                if (false) {
+                    echo 'Stage pipeline succeeded. Cleaning up stage resources and local images...'
+                    bat 'kubectl delete deployment --all -n stage --ignore-not-found=true'
+                    bat 'kubectl delete service --all -n stage --ignore-not-found=true'
+                    bat 'kubectl delete configmap --all -n stage --ignore-not-found=true'
+                    bat 'kubectl delete secret --all -n stage --ignore-not-found=true'
+                    bat 'kubectl delete pod --all -n stage --force --grace-period=0 --ignore-not-found=true'
+                    def services = [
+                        'circleguard-auth-service',
+                        'circleguard-identity-service',
+                        'circleguard-form-service',
+                        'circleguard-promotion-service',
+                        'circleguard-notification-service',
+                        'circleguard-gateway-service',
+                        'circleguard-file-service',
+                        'circleguard-dashboard-service'
+                    ]
+                    for (svc in services) {
+                        bat "docker rmi ${DOCKER_USER}/${svc}:dev 2>nul || exit 0"
+                        bat "docker rmi ${DOCKER_USER}/${svc}:stage 2>nul || exit 0"
+                    }
                 }
             }
-            */
         }
     }
 }

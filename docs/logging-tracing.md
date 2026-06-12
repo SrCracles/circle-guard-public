@@ -82,16 +82,18 @@ Los clientes `RestTemplate` inyectados con `RestTemplateBuilder` propagan header
 
 ## Pipelines acelerados (temporal)
 
-Para validar HU-30/HU-32 sin esperar quality gates completos, los Jenkinsfiles tienen stages comentados con `TEMP (HU-30/32 ELK)`:
+Para validar HU-30/HU-32 sin esperar quality gates completos, los Jenkinsfiles tienen stages deshabilitados con `when { expression { false } }` (marca `TEMP (HU-30/32 ELK)`). No usar comentarios `/* */` en Jenkinsfiles: patrones como `**/build/` rompen el parser Groovy.
 
-| Pipeline | Stages activos | Stages comentados |
-|----------|----------------|-------------------|
+| Pipeline | Stages activos | Stages deshabilitados (`when { false }`) |
+|----------|----------------|------------------------------------------|
 | **dev** (`jenkins/dev/Jenkinsfile-*`) | Checkout, Build JAR, Build Docker Image, Push `:dev` | Test (JaCoCo), SonarQube, Trivy |
-| **stage** (`jenkins/stage/Jenkinsfile-stage`) | Checkout, Pull images, Deploy to Stage | Newman E2E, OWASP ZAP, Locust, Promote `:stage` |
+| **stage** (`jenkins/stage/Jenkinsfile-stage`) | Checkout, Pull images, Deploy to Stage, **Newman E2E** | OWASP ZAP, Locust, Promote `:stage` |
+
+Newman E2E se mantiene activo porque dispara el flujo auth → identity → form → promotion → notification, necesario para validar trazas encadenadas en Jaeger y logs correlacionados por `traceId` en Kibana.
 
 Ademas, el `post { success }` de stage **no borra** el namespace `stage` para que los microservicios sigan enviando logs y trazas.
 
-Restaurar los bloques comentados antes de merge a produccion o ejecucion del pipeline master.
+Restaurar cambiando `expression { false }` por `{ true }` o eliminando el bloque `when` antes de merge a produccion o ejecucion del pipeline master.
 
 ## Despliegue
 
