@@ -329,7 +329,8 @@ Para validar el bloqueo de estado, iniciar un `terraform apply` y lanzar otro de
 ## Costos y consideraciones
 
 - AKS control plane en tier Free no cobra por el control plane, pero los nodos si consumen credito.
-- Los `terraform.tfvars` usan `Standard_D2s_v7` porque esta suscripcion lo permite en `eastus`. Si Azure rechaza el tamaño de VM, consultar tamaños disponibles con `az vm list-sizes --location eastus --output table` y cambiar `aks_vm_size`.
+- Los `terraform.tfvars` usan `Standard_E2s_v7` porque `Standard_B2ms` no esta permitido en esta suscripcion y `Standard_D2s_v7` puede fallar por cuota `StandardDsv7Family` en `eastus`.
+- Si Azure vuelve a rechazar el tamaño de VM, revisar cuotas con `az vm list-usage --location eastus --output table`, buscar una familia con vCPU disponibles, listar tamaños con `az vm list-sizes --location eastus --output table` y cambiar `aks_vm_size`.
 - `dev` habilita solo SonarQube; `stage` y `master` habilitan la infraestructura compartida completa.
 - La infraestructura de datos usa volumen efimero igual que los manifiestos locales actuales. Para produccion real se debe migrar PostgreSQL, Redis, Kafka y Neo4j a almacenamiento persistente o servicios administrados.
 - El backend remoto queda fuera de los resource groups de ambientes para no destruir el estado al ejecutar `terraform destroy`.
