@@ -15,7 +15,7 @@ spec:
         - containerPort: 8089
           name: web
     - name: locust-exporter
-      image: containersol/locust_exporter:0.4.0
+      image: containersol/locust_exporter
       env:
         - name: LOCUST_HOST
           value: localhost
