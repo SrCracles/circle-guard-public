@@ -6,27 +6,3 @@ metadata:
   labels:
     app.kubernetes.io/name: jenkins-deployer
     app.kubernetes.io/component: rbac
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: circleguard-jenkins-deployer
-  labels:
-    app.kubernetes.io/name: jenkins-deployer
-    app.kubernetes.io/component: rbac
-rules:
-  - apiGroups: ["apps"]
-    resources: ["deployments"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["services", "configmaps"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["pods", "pods/log"]
-    verbs: ["get", "list", "watch", "create", "delete"]
-  - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create"]
-  - apiGroups: [""]
-    resources: ["namespaces"]
-    verbs: ["get", "create"]

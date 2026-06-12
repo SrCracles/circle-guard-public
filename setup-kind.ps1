@@ -125,6 +125,7 @@ if (Test-Path $secretManifest) {
 Write-Host "Applying RBAC manifests (Jenkins deployer + microservice policies)..."
 if (Test-Path "k8s/rbac/kustomization.yaml") {
     kubectl apply -k k8s/rbac/
+    kubectl delete clusterrole circleguard-jenkins-deployer --ignore-not-found | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Failed to apply k8s/rbac/. Review manifests."
     } else {

@@ -5,9 +5,10 @@ CircleGuard aplica el principio de minimo privilegio mediante ServiceAccounts de
 ## Estructura de manifiestos
 
 ```
-k8s/rbac/                          # RBAC de Jenkins (cluster-wide, bindings por namespace)
-  jenkins-deployer.yaml              # SA + ClusterRole
-  jenkins-rolebindings.yaml          # Bindings en dev, stage, master
+k8s/rbac/                          # RBAC de Jenkins (Roles namespaced, sin ClusterRole)
+  jenkins-deployer.yaml              # ServiceAccount en kube-system
+  jenkins-roles.yaml                 # Role jenkins-deployer en dev, stage y master
+  jenkins-rolebindings.yaml          # RoleBindings en dev, stage, master
 k8s/base/rbac/                       # RBAC de microservicios (desplegado con cada overlay)
   serviceaccounts.yaml               # 8 ServiceAccounts
   microservice-roles.yaml            # Role microservice-reader (solo lectura)
@@ -28,10 +29,28 @@ Los Secrets compartidos (`circleguard-secrets`) se aplican una vez en `setup-kin
 ### Kubeconfig con permisos limitados
 
 ```powershell
+# 1. Aplicar (o re-aplicar) RBAC y eliminar ClusterRole legado si existia
+kubectl apply -k k8s/rbac/
+kubectl delete clusterrole circleguard-jenkins-deployer --ignore-not-found
+
+# 2. Generar kubeconfig del ServiceAccount (verifica permisos al finalizar)
 .\scripts\setup-jenkins-kubeconfig.ps1
+
+# 3. Verificacion completa
+.\scripts\verify-rbac.ps1
 ```
 
-Genera `jenkins-kubeconfig-rbac.yaml` tomando como fuente `kind-kubeconfig.yaml` si existe, para evitar depender del contexto activo de `kubectl`. Configurar `KUBECONFIG` en Jenkins con esa ruta para operar con minimo privilegio.
+Genera `jenkins-kubeconfig-rbac.yaml` en UTF-8 **sin BOM** (importante en Windows: si el archivo tiene BOM, `kubectl` lo ignora y usa el kubeconfig admin por defecto).
+
+**Siempre** usa `--kubeconfig` explicito al probar:
+
+```powershell
+kubectl --kubeconfig .\jenkins-kubeconfig-rbac.yaml auth can-i create deployments -n master   # yes
+kubectl --kubeconfig .\jenkins-kubeconfig-rbac.yaml auth can-i create deployments -n infra    # no
+kubectl --kubeconfig .\jenkins-kubeconfig-rbac.yaml get secrets -n infra                    # Forbidden
+```
+
+Configurar `KUBECONFIG` en Jenkins con la ruta **absoluta** a ese archivo.
 
 ## Microservicios
 

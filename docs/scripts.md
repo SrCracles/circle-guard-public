@@ -218,10 +218,22 @@ Ver [`docs/tls.md`](tls.md) para el flujo en cloud con Let's Encrypt.
 
 ## `scripts/setup-jenkins-kubeconfig.ps1` — Kubeconfig RBAC para Jenkins (HU-36)
 
-Crea `jenkins-kubeconfig-rbac.yaml` con el token del ServiceAccount `jenkins-deployer` (permisos solo en dev/stage/master):
+Crea `jenkins-kubeconfig-rbac.yaml` con el token del ServiceAccount `jenkins-deployer` (permisos solo en dev/stage/master). Escribe UTF-8 sin BOM y ejecuta comprobaciones `can-i` al finalizar.
 
 ```powershell
+kubectl apply -k k8s/rbac/
+kubectl delete clusterrole circleguard-jenkins-deployer --ignore-not-found
 .\scripts\setup-jenkins-kubeconfig.ps1
 ```
 
-Configurar esa ruta como `KUBECONFIG` en Jenkins. Ver [`docs/rbac.md`](rbac.md).
+Configurar esa ruta como `KUBECONFIG` en Jenkins (ruta absoluta recomendada). Ver [`docs/rbac.md`](rbac.md).
+
+---
+
+## `scripts/verify-rbac.ps1` — Verificacion RBAC (HU-36)
+
+Comprueba que `jenkins-deployer` no puede operar en `infra` y que el microservicio no lee secrets ajenos:
+
+```powershell
+.\scripts\verify-rbac.ps1
+```
