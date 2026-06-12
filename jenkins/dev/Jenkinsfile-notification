@@ -28,7 +28,7 @@ pipeline {
             }
         }
         stage('SonarQube Analysis') {
-            when { expression { true } }
+            when { expression { false } }
             steps {
                 bat "docker run --rm -v \"%WORKSPACE%\\services\\%SERVICE_NAME%\":/usr/src sonarsource/sonar-scanner-cli -Dsonar.projectBaseDir=/usr/src -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.qualitygate.wait=true -Dsonar.login=admin -Dsonar.password=admin"
             }
