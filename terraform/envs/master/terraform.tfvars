@@ -1,9 +1,9 @@
 environment         = "master"
-location            = "eastus"
-resource_group_name = "circleguard-master-rg"
+location            = "westus"
+resource_group_name = "circleguard-dev-westus-rg"
 
 aks_node_count      = 1
-aks_vm_size         = "Standard_D2s_v7"
+aks_vm_size         = "Standard_D2s_v3"
 aks_os_disk_size_gb = 64
 enable_aks_monitoring = false
 enable_auto_scaling = true

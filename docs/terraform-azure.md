@@ -329,7 +329,8 @@ Para validar el bloqueo de estado, iniciar un `terraform apply` y lanzar otro de
 ## Costos y consideraciones
 
 - AKS control plane en tier Free no cobra por el control plane, pero los nodos si consumen credito.
-- Los `terraform.tfvars` usan `Standard_D2s_v7` como tamaño de nodo AKS para desplegar lo minimo suficiente.
+- Terraform exige definir `aks_vm_size` para el `default_node_pool` de AKS; no se puede dejar automatico desde este provider.
+- Los `terraform.tfvars` usan `Standard_D2s_v3` porque la cuota muestra disponibilidad en `Standard DSv3 Family vCPUs` en `eastus`.
 - Si Azure vuelve a rechazar el tamaño de VM por cuota, revisar cuotas con `az vm list-usage --location eastus --output table`, buscar una familia con vCPU disponibles, listar tamaños con `az vm list-sizes --location eastus --output table` y cambiar `aks_vm_size`.
 - Azure Monitor / Log Analytics queda desactivado por defecto (`enable_aks_monitoring = false`) porque algunas suscripciones de estudiante bloquean ese recurso por politica regional. Si la suscripcion lo permite, puede activarse cambiando la variable a `true`.
 - `dev` habilita solo SonarQube; `stage` y `master` habilitan la infraestructura compartida completa.
