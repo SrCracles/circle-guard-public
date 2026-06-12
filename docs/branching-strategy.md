@@ -23,7 +23,19 @@ Cada rama permanente dispara su pipeline en Jenkins y el tag Docker correspondie
 
 ## Ramas permanentes
 
-El repositorio define tres ramas de larga duración, una por ambiente:
+CircleGuard es un **monorepo**: los ocho microservicios viven en el mismo repositorio (`services/`), bajo las **mismas** ramas `develop`, `stage` y `master`. No existe una rama de integración por servicio (por ejemplo, no hay `develop-auth` ni `develop-promotion`).
+
+La separación por microservicio ocurre en la capa de CI/CD, no en Git:
+
+| Capa | Qué se separa por servicio | Qué es compartido |
+|------|---------------------------|-------------------|
+| **Git** | Nada (mismo historial para todos) | `develop`, `stage`, `master` |
+| **Jenkins** | Un job dev por servicio (`Jenkinsfile-auth`, `Jenkinsfile-identity`, …) | Todos hacen checkout de la misma rama (`develop`) |
+| **Docker** | Una imagen por servicio (`srcracles/circleguard-auth-service`, …) | Mismo tag de ambiente (`:dev`, `:stage`, `:master`) |
+
+Así, un merge a `develop` puede incluir cambios en uno o varios microservicios a la vez. Cada pipeline dev compila **solo su servicio** (vía `SERVICE_NAME` en el Jenkinsfile), pero lee el **mismo commit** de la rama. Si solo cambió `auth-service`, igual conviene ejecutar los ocho jobs dev (o al menos el afectado) para mantener las imágenes `:dev` alineadas con el estado de la rama.
+
+El repositorio define tres ramas de larga duración, una por **ambiente** (no por microservicio):
 
 | Rama | Rol | Pipeline | Tag Docker |
 |------|-----|----------|------------|
