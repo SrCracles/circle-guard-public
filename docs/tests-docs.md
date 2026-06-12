@@ -182,13 +182,18 @@ Para garantizar que el código se mantiene con un estándar alto de calidad con 
 
 Ver detalle en [`docs/monitoring.md`](monitoring.md).
 
-## 8. Seguridad operativa (HU-17, HU-36, HU-37)
+## 8. Change Management y rollback (HU-24, HU-26)
+
+- **HU-24 - Change Management**: tipos de cambio (estándar, urgente, emergencia), flujos de aprobación y trazabilidad. El pipeline master incluye aprobación manual antes del deploy. Ver [`docs/change-management.md`](change-management.md).
+- **HU-26 - Rollback**: `kubectl rollout undo` en namespace `master`, redeploy por tag `v` anterior, retención de dos versiones en DockerHub. Objetivo: menos de 5 minutos. Ver [`docs/rollback-plan.md`](rollback-plan.md).
+
+## 9. Seguridad operativa (HU-17, HU-36, HU-37)
 
 - **HU-17 — Notificaciones de pipeline**: bloques `post { failure/success }` en los 10 Jenkinsfiles; email via `CG_NOTIFY_EMAIL`. Ver [`docs/pipeline-notifications.md`](pipeline-notifications.md).
 - **HU-36 — RBAC**: ServiceAccounts dedicados por microservicio; Jenkins limitado a dev/stage/master. Ver [`docs/rbac.md`](rbac.md).
 - **HU-37 — TLS**: Ingress NGINX en master con Secret `circleguard-tls`; auth y gateway solo por HTTPS. Ver [`docs/tls.md`](tls.md).
 
-## 9. Logging y Tracing (HU-30, HU-32)
+## 10. Logging y Tracing (HU-30, HU-32)
 
 - **ELK** en namespace `infra`: Elasticsearch + Logstash + Kibana para logs centralizados JSON.
 - **Campos de log**: `timestamp`, `nivel`, `servicio`, `traceId`, `mensaje` via Logback + Logstash appender.
@@ -200,7 +205,7 @@ Ver detalle en [`docs/logging-tracing.md`](logging-tracing.md).
 
 ---
 
-## 10. Infraestructura de Análisis Estático para Dev (Paralelismo)
+## 11. Infraestructura de Análisis Estático para Dev (Paralelismo)
 
 Para soportar la ejecución simultánea de los 8 pipelines de desarrollo sin conflictos de puertos ni credenciales dinámicas, se realizaron los siguientes ajustes:
 

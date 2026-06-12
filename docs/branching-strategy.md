@@ -1,4 +1,4 @@
-# Estrategia de Branching — CircleGuard (HU-02)
+# Estrategia de Branching — CircleGuard 
 
 Este documento describe la estrategia de ramas adoptada en el repositorio `circle-guard-public`, su relación con los pipelines de Jenkins y la promoción de imágenes Docker entre ambientes.
 
@@ -135,6 +135,8 @@ Para incidentes en producción se crea una rama `hotfix/` desde `master`, se cor
 
 ## Referencias
 
-- [`setup-guide.md`](setup-guide.md) — configuración de Jenkins y orden de pipelines
-- [`services.md`](services.md) — matriz de servicios, ambientes y tags
-- [`tests-docs.md`](tests-docs.md) — quality gates en dev y stage
+- [`setup-guide.md`](setup-guide.md) - configuración de Jenkins y orden de pipelines
+- [`services.md`](services.md) - matriz de servicios, ambientes y tags
+- [`tests-docs.md`](tests-docs.md) - quality gates en dev y stage
+- [`change-management.md`](change-management.md) - aprobación y trazabilidad en producción (HU-24)
+- [`rollback-plan.md`](rollback-plan.md) - rollback en master (HU-26)

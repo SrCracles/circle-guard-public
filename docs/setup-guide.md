@@ -211,7 +211,7 @@ Si stage pasa (E2E + OWASP ZAP + Locust), ejecutar:
 circle-guard-master
 ```
 
-Master calculará la versión semántica (ej. `v1.0.1`), publicará las imágenes en DockerHub con los tags inmutables (`vX.Y.Z`) y mutables (`master`), desplegará la versión inmutable en producción y publicará las Release Notes en GitHub.
+Master calculará la versión semántica (ej. `v1.0.1`), pedirá **aprobación manual** antes de desplegar, publicará las imágenes en DockerHub con los tags inmutables (`vX.Y.Z`) y mutables (`master`), desplegará la versión inmutable en producción y publicará las Release Notes en GitHub. Ver [`docs/change-management.md`](change-management.md) y [`docs/rollback-plan.md`](rollback-plan.md).
 
 ---
 
