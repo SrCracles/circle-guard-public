@@ -184,7 +184,7 @@ Ver detalle en [`docs/monitoring.md`](monitoring.md).
 
 ## 8. Seguridad operativa (HU-17, HU-36, HU-37)
 
-- **HU-17 — Notificaciones de pipeline**: bloques `post { failure/success }` en los 10 Jenkinsfiles; webhook Slack/Teams o email via `CG_NOTIFY_*`. Ver [`docs/pipeline-notifications.md`](pipeline-notifications.md).
+- **HU-17 — Notificaciones de pipeline**: bloques `post { failure/success }` en los 10 Jenkinsfiles; email via `CG_NOTIFY_EMAIL`. Ver [`docs/pipeline-notifications.md`](pipeline-notifications.md).
 - **HU-36 — RBAC**: ServiceAccounts dedicados por microservicio; Jenkins limitado a dev/stage/master. Ver [`docs/rbac.md`](rbac.md).
 - **HU-37 — TLS**: Ingress NGINX en master con Secret `circleguard-tls`; auth y gateway solo por HTTPS. Ver [`docs/tls.md`](tls.md).
 

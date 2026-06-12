@@ -1,4 +1,3 @@
-import groovy.json.JsonOutput
 import org.jenkinsci.plugins.workflow.actions.ErrorAction
 import org.jenkinsci.plugins.workflow.graph.FlowNode
 
@@ -18,12 +17,9 @@ Commit Message: ${commitMsg}
 Log: ${buildUrl}console"""
 
     echo message
-    dispatchNotification(
+    sendEmail(
         pipelineName: pipelineName,
         failedStage: failedStage,
-        buildUrl: buildUrl,
-        commitSha: commitSha,
-        commitMsg: commitMsg,
         status: 'failure',
         plainBody: message
     )
@@ -49,12 +45,9 @@ Commit Message: ${commitMsg}
 Log: ${buildUrl}console"""
 
     echo message
-    dispatchNotification(
+    sendEmail(
         pipelineName: pipelineName,
         failedStage: 'N/A (recovered)',
-        buildUrl: buildUrl,
-        commitSha: commitSha,
-        commitMsg: commitMsg,
         status: 'recovery',
         plainBody: message
     )
@@ -121,68 +114,13 @@ def resolveGitCommitMessage() {
     }
 }
 
-def dispatchNotification(Map args) {
-    def webhookUrl = env.CG_NOTIFY_WEBHOOK_URL ?: ''
+def sendEmail(Map args) {
     def notifyEmail = env.CG_NOTIFY_EMAIL ?: ''
-
-    if (webhookUrl) {
-        sendWebhook(webhookUrl, args)
+    if (!notifyEmail) {
+        echo 'WARN (HU-17): Configure CG_NOTIFY_EMAIL in Jenkins Global Properties to enable email notifications.'
+        return
     }
 
-    if (notifyEmail) {
-        sendEmail(notifyEmail, args)
-    }
-
-    if (!webhookUrl && !notifyEmail) {
-        echo 'WARN (HU-17): Configure CG_NOTIFY_WEBHOOK_URL and/or CG_NOTIFY_EMAIL in Jenkins Global Properties to enable notifications.'
-    }
-}
-
-def sendWebhook(String webhookUrl, Map args) {
-    def webhookType = (env.CG_NOTIFY_WEBHOOK_TYPE ?: detectWebhookType(webhookUrl)).toLowerCase()
-    def payload
-
-    if (webhookType == 'teams') {
-        def color = args.status == 'failure' ? 'FF0000' : '00AA00'
-        def title = args.status == 'failure' ? 'CircleGuard Pipeline FAILED' : 'CircleGuard Pipeline RECOVERED'
-        payload = [
-            '@type'      : 'MessageCard',
-            '@context'   : 'http://schema.org/extensions',
-            'summary'    : title,
-            'themeColor' : color,
-            'title'      : title,
-            'sections'   : [[
-                'facts': [
-                    ['name': 'Pipeline', 'value': args.pipelineName],
-                    ['name': 'Failed Stage', 'value': args.failedStage],
-                    ['name': 'Commit', 'value': args.commitSha],
-                    ['name': 'Commit Message', 'value': args.commitMsg],
-                    ['name': 'Log', 'value': "${args.buildUrl}console"]
-                ]
-            ]]
-        ]
-    } else {
-        def prefix = args.status == 'failure' ? 'FAILED' : 'RECOVERED'
-        payload = [
-            text: "*CircleGuard Pipeline ${prefix}*: ${args.pipelineName}",
-            blocks: [[
-                type: 'section',
-                text: [type: 'mrkdwn', text: "*Pipeline:* ${args.pipelineName}\n*Stage:* ${args.failedStage}\n*Commit:* `${args.commitSha}`\n*Message:* ${args.commitMsg}\n*Log:* <${args.buildUrl}console|View Console>"]
-            ]]
-        ]
-    }
-
-    writeFile file: 'pipeline-notify-payload.json', text: JsonOutput.toJson(payload)
-    def status = bat(
-        script: "@echo off\ncurl -s -S -X POST -H \"Content-Type: application/json\" --data-binary @pipeline-notify-payload.json \"${webhookUrl}\"",
-        returnStatus: true
-    )
-    if (status != 0) {
-        echo "WARN (HU-17): Webhook notification returned non-zero exit code (${status})."
-    }
-}
-
-def sendEmail(String notifyEmail, Map args) {
     def subjectPrefix = args.status == 'failure' ? 'FAILED' : 'RECOVERED'
     try {
         emailext(
@@ -203,13 +141,6 @@ def sendEmail(String notifyEmail, Map args) {
             echo "WARN (HU-17): Built-in mail step also failed: ${mailError.message}"
         }
     }
-}
-
-def detectWebhookType(String webhookUrl) {
-    if (webhookUrl.contains('office.com') || webhookUrl.contains('office365.com')) {
-        return 'teams'
-    }
-    return 'slack'
 }
 
 return this

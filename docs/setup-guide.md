@@ -81,9 +81,7 @@ Estas variables centralizan la configuracion del proyecto. Solo se configuran un
 | `CG_GITHUB_OWNER` | `SrCracles` | Owner del repositorio GitHub |
 | `CG_GITHUB_REPO` | `circle-guard-public` | Nombre del repositorio GitHub |
 | `CG_TRIVY_SEVERITY_FAIL` | `CRITICAL` | Severidad minima que falla el pipeline en el escaneo Trivy. Valores validos: `CRITICAL` (default) o `HIGH,CRITICAL` |
-| `CG_NOTIFY_WEBHOOK_URL` | _(vacío)_ | Webhook de Slack o Teams para alertas de pipeline (HU-17) |
 | `CG_NOTIFY_EMAIL` | _(vacío)_ | Email del equipo DevOps para alertas de pipeline (HU-17) |
-| `CG_NOTIFY_WEBHOOK_TYPE` | `slack` | Formato del webhook: `slack` o `teams` (HU-17) |
 
 > **Nota:** Los valores de la tabla son los defaults del proyecto. Si alguien hace un fork o trabaja con su propia cuenta de DockerHub, solo debe cambiar estos valores aqui, sin tocar ningun Jenkinsfile.
 
@@ -113,7 +111,7 @@ Ir a **Manage Jenkins > Plugins > Available plugins** e instalar los que falten:
 | **HTML Publisher** | No | Ver el reporte HTML de Newman en Jenkins | No, opcional pero recomendado |
 | **JUnit** | Si (suggested plugins) | Publicar resultados de tests | Si, pero ya se tiene |
 | **Coverage** | No | Generar gráficos de tendencia de cobertura de pruebas en el dashboard | Si, para HU-23 |
-| **Email Extension** | No | Enviar notificaciones por email cuando falla un pipeline | Recomendado para HU-17 (alternativa: solo webhook) |
+| **Email Extension** | No | Enviar notificaciones por email cuando falla un pipeline | Si, obligatorio para HU-17 |
 
 > **Nota:** No es necesario instalar `Kubernetes CLI`. Los pipelines usan `kubectl` directamente como comando del sistema, no usan los steps especiales de Kubernetes de Jenkins.
 
@@ -129,7 +127,7 @@ Usar `jenkins-kubeconfig-rbac.yaml` como `KUBECONFIG` en Jenkins en lugar del ku
 
 ### 2.6 Notificaciones de pipelines (HU-17)
 
-Configurar al menos `CG_NOTIFY_WEBHOOK_URL` o `CG_NOTIFY_EMAIL` en Global Properties. Ver [`docs/pipeline-notifications.md`](pipeline-notifications.md).
+Configurar SMTP en Jenkins y definir `CG_NOTIFY_EMAIL` en Global Properties. Ver [`docs/pipeline-notifications.md`](pipeline-notifications.md).
 
 ---
 

@@ -1,19 +1,16 @@
 # Notificaciones automaticas de fallos en pipelines (HU-17)
 
-CircleGuard envia notificaciones automaticas cuando un pipeline de Jenkins falla y, opcionalmente, cuando un build exitoso recupera un fallo previo.
+CircleGuard envia notificaciones por **email** cuando un pipeline de Jenkins falla y, cuando un build exitoso recupera un fallo previo.
 
-## Canales soportados
+## Canal de notificacion
 
 | Canal | Variable Jenkins | Requisito |
 |-------|------------------|-----------|
-| Webhook Slack / Teams | `CG_NOTIFY_WEBHOOK_URL` | URL del incoming webhook |
-| Email | `CG_NOTIFY_EMAIL` | Plugin **Email Extension** (recomendado) o SMTP configurado en Jenkins |
+| Email | `CG_NOTIFY_EMAIL` | Plugin **Email Extension** (recomendado) y SMTP configurado en Jenkins |
 
-Opcional: `CG_NOTIFY_WEBHOOK_TYPE` = `slack` o `teams` (si se omite, se infiere por la URL).
+## Contenido del email
 
-## Contenido de la notificacion
-
-Cada alerta incluye:
+Cada mensaje incluye:
 
 - Nombre del pipeline
 - Etapa que fallo (o `N/A (recovered)` en recuperacion)
@@ -24,7 +21,7 @@ Cada alerta incluye:
 
 | Archivo | Proposito |
 |---------|-----------|
-| `jenkins/lib/pipeline-notifications.groovy` | Logica compartida de notificacion |
+| `jenkins/lib/pipeline-notifications.groovy` | Logica compartida de notificacion por email |
 | `jenkins/dev/Jenkinsfile-*` | `post { failure/success }` en los 8 pipelines dev |
 | `jenkins/stage/Jenkinsfile-stage` | Notificaciones del pipeline stage |
 | `jenkins/master/Jenkinsfile-master` | Notificaciones del pipeline master |
@@ -35,19 +32,25 @@ En `post { success }`, se llama a `sendRecoveryNotification()` solo si `currentB
 
 ## Configuracion en Jenkins
 
-Ir a **Manage Jenkins > System > Global properties > Environment variables**:
+### 1. SMTP del servidor
+
+Ir a **Manage Jenkins > System > Extended E-mail Notification** (o **E-mail Notification**) y configurar el servidor SMTP (host, puerto, credenciales si aplica).
+
+### 2. Destinatario
+
+Ir a **Manage Jenkins > System > Global properties > Environment variables** y agregar:
 
 | Variable | Ejemplo | Descripcion |
 |----------|---------|-------------|
-| `CG_NOTIFY_WEBHOOK_URL` | `https://hooks.slack.com/services/...` | Webhook de Slack o Teams |
-| `CG_NOTIFY_EMAIL` | `devops@universidad.edu` | Destinatario de email |
-| `CG_NOTIFY_WEBHOOK_TYPE` | `teams` | Opcional si la URL no permite inferir el formato |
+| `CG_NOTIFY_EMAIL` | `devops@universidad.edu` | Email del equipo DevOps que recibe las alertas |
+
+### 3. Plugin recomendado
+
+Instalar **Email Extension** desde **Manage Jenkins > Plugins** para usar `emailext` con mejor formato y trazabilidad.
 
 ## Validacion
 
-1. Configurar al menos un canal (`CG_NOTIFY_WEBHOOK_URL` o `CG_NOTIFY_EMAIL`).
-2. Ejecutar un pipeline dev y forzar fallo (por ejemplo, deshabilitar temporalmente Docker).
-3. Verificar mensaje en Slack/Teams o bandeja de email.
-4. Corregir el problema y volver a ejecutar: debe llegar notificacion de **RECOVERED** solo si el build anterior fallo.
-
-Ver comandos detallados en la seccion de pruebas al final de este documento en la respuesta del agente o en `docs/setup-guide.md`.
+1. Configurar SMTP en Jenkins y definir `CG_NOTIFY_EMAIL`.
+2. Ejecutar un pipeline dev y forzar fallo (por ejemplo, detener Docker temporalmente).
+3. Verificar el email con asunto `[CircleGuard] FAILED: ...`.
+4. Corregir el problema y volver a ejecutar: debe llegar `[CircleGuard] RECOVERED: ...` solo si el build anterior fallo.
