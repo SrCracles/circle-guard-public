@@ -16,12 +16,12 @@ k8s/base/rbac/                       # RBAC de microservicios (desplegado con ca
 
 ## Jenkins (`jenkins-deployer`)
 
-| Aspecto | Valor |
-|---------|-------|
-| ServiceAccount | `jenkins-deployer` en `kube-system` |
-| Permisos | Deployments, Services, ConfigMaps, Pods (rollout/E2E/Locust) |
-| Namespaces | `dev`, `stage`, `master` via RoleBinding |
-| Sin acceso | `infra`, `cluster-admin`, escritura de Secrets |
+| Aspecto        | Valor                                                        |
+| -------------- | ------------------------------------------------------------ |
+| ServiceAccount | `jenkins-deployer` en `kube-system`                          |
+| Permisos       | Deployments, Services, ConfigMaps, Pods (rollout/E2E/Locust) |
+| Namespaces     | `dev`, `stage`, `master` via RoleBinding                     |
+| Sin acceso     | `infra`, `cluster-admin`, escritura de Secrets               |
 
 Los Secrets compartidos (`circleguard-secrets`) se aplican una vez en `setup-kind.ps1`. Jenkins no puede crear ni modificar secrets.
 
@@ -31,22 +31,22 @@ Los Secrets compartidos (`circleguard-secrets`) se aplican una vez en `setup-kin
 .\scripts\setup-jenkins-kubeconfig.ps1
 ```
 
-Genera `jenkins-kubeconfig-rbac.yaml`. Configurar `KUBECONFIG` en Jenkins con esa ruta para operar con minimo privilegio.
+Genera `jenkins-kubeconfig-rbac.yaml` tomando como fuente `kind-kubeconfig.yaml` si existe, para evitar depender del contexto activo de `kubectl`. Configurar `KUBECONFIG` en Jenkins con esa ruta para operar con minimo privilegio.
 
 ## Microservicios
 
 Cada Deployment usa su propio ServiceAccount (no `default`):
 
-| Servicio | ServiceAccount |
-|----------|----------------|
-| auth-service | `circleguard-auth-sa` |
-| identity-service | `circleguard-identity-sa` |
-| form-service | `circleguard-form-sa` |
-| promotion-service | `circleguard-promotion-sa` |
+| Servicio             | ServiceAccount                |
+| -------------------- | ----------------------------- |
+| auth-service         | `circleguard-auth-sa`         |
+| identity-service     | `circleguard-identity-sa`     |
+| form-service         | `circleguard-form-sa`         |
+| promotion-service    | `circleguard-promotion-sa`    |
 | notification-service | `circleguard-notification-sa` |
-| gateway-service | `circleguard-gateway-sa` |
-| file-service | `circleguard-file-sa` |
-| dashboard-service | `circleguard-dashboard-sa` |
+| gateway-service      | `circleguard-gateway-sa`      |
+| file-service         | `circleguard-file-sa`         |
+| dashboard-service    | `circleguard-dashboard-sa`    |
 
 Role `microservice-reader`: solo `get`, `list`, `watch` sobre ConfigMaps, Services, Pods, Endpoints y Deployments en su namespace. **Sin acceso a Secrets.**
 
