@@ -33,6 +33,7 @@ module "aks" {
   node_count         = var.aks_node_count
   vm_size            = var.aks_vm_size
   os_disk_size_gb    = var.aks_os_disk_size_gb
+  enable_monitoring  = var.enable_aks_monitoring
   enable_auto_scaling = var.enable_auto_scaling
   min_count          = var.aks_min_count
   max_count          = var.aks_max_count

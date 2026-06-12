@@ -59,6 +59,12 @@ variable "aks_os_disk_size_gb" {
   default     = 64
 }
 
+variable "enable_aks_monitoring" {
+  description = "Enable Azure Monitor for AKS through Log Analytics."
+  type        = bool
+  default     = false
+}
+
 variable "enable_auto_scaling" {
   description = "Enable autoscaling in the AKS default node pool."
   type        = bool

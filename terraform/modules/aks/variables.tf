@@ -37,6 +37,11 @@ variable "os_disk_size_gb" {
   type        = number
 }
 
+variable "enable_monitoring" {
+  description = "Enable Azure Monitor for AKS through Log Analytics."
+  type        = bool
+}
+
 variable "enable_auto_scaling" {
   description = "Enable node pool autoscaling."
   type        = bool

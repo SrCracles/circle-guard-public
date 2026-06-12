@@ -1,4 +1,6 @@
 resource "azurerm_log_analytics_workspace" "main" {
+  count = var.enable_monitoring ? 1 : 0
+
   name                = "${var.name_prefix}-law"
   location            = var.resource_group.location
   resource_group_name = var.resource_group.name
@@ -36,7 +38,11 @@ resource "azurerm_kubernetes_cluster" "main" {
     load_balancer_sku = "standard"
   }
 
-  oms_agent {
-    log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+  dynamic "oms_agent" {
+    for_each = var.enable_monitoring ? [1] : []
+
+    content {
+      log_analytics_workspace_id = azurerm_log_analytics_workspace.main[0].id
+    }
   }
 }
