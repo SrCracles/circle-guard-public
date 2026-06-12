@@ -1,5 +1,6 @@
 package com.circleguard.promotion.service;
 
+import com.circleguard.promotion.metrics.BusinessMetrics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +41,9 @@ class PromotionToNotificationKafkaTest {
 
     @Mock
     private ValueOperations<String, String> valueOperations;
+
+    @Mock
+    private BusinessMetrics businessMetrics;
 
     @BeforeEach
     void setup() {

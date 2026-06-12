@@ -1,6 +1,7 @@
 package com.circleguard.promotion.service;
 
 import com.circleguard.promotion.exception.FenceException;
+import com.circleguard.promotion.metrics.BusinessMetrics;
 import com.circleguard.promotion.model.graph.UserNode;
 import com.circleguard.promotion.model.jpa.SystemSettings;
 import com.circleguard.promotion.repository.graph.UserNodeRepository;
@@ -49,6 +50,9 @@ class HealthStatusServiceTest {
 
     @Mock
     private com.circleguard.promotion.repository.graph.CircleNodeRepository circleNodeRepository;
+
+    @Mock
+    private BusinessMetrics businessMetrics;
 
     @Test
     void shouldUpdateStatusSuccessfully() {

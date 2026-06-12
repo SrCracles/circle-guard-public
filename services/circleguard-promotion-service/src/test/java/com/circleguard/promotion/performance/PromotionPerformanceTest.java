@@ -1,5 +1,6 @@
 package com.circleguard.promotion.performance;
 
+import com.circleguard.promotion.metrics.BusinessMetrics;
 import com.circleguard.promotion.model.jpa.SystemSettings;
 import com.circleguard.promotion.repository.jpa.SystemSettingsRepository;
 import com.circleguard.promotion.service.HealthStatusService;
@@ -39,6 +40,9 @@ public class PromotionPerformanceTest {
 
     @Mock
     private com.circleguard.promotion.repository.graph.CircleNodeRepository circleNodeRepository;
+
+    @Mock
+    private BusinessMetrics businessMetrics;
 
     @InjectMocks
     private HealthStatusService healthStatusService;

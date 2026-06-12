@@ -1,5 +1,6 @@
 package com.circleguard.notification.service;
 
+import com.circleguard.notification.metrics.BusinessMetrics;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,6 +27,9 @@ class NotificationDispatcherTest {
 
     @Mock
     private TemplateService templateService;
+
+    @Mock
+    private BusinessMetrics businessMetrics;
 
     @InjectMocks
     private NotificationDispatcher dispatcher;
