@@ -8,8 +8,41 @@ $ErrorActionPreference = "Stop"
 
 New-Item -ItemType Directory -Force -Path $CertDir | Out-Null
 
-$openssl = Get-Command openssl -ErrorAction SilentlyContinue
-if (-not $openssl) {
+function Get-OpenSslPath {
+    $command = Get-Command openssl.exe -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $command = Get-Command openssl -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $where = & where.exe openssl 2>$null | Select-Object -First 1
+    if ($where) {
+        return $where.Trim()
+    }
+
+    $candidateDirs = @(
+        $env:OPENSSL_DIR,
+        "C:\Program Files\OpenSSL-Win64\bin",
+        "C:\Program Files\OpenSSL-Win32\bin",
+        "C:\Program Files\Git\usr\bin"
+    ) | Where-Object { $_ }
+
+    foreach ($dir in $candidateDirs) {
+        $candidate = Join-Path $dir "openssl.exe"
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
+$opensslPath = Get-OpenSslPath
+if (-not $opensslPath) {
     Write-Error "openssl not found in PATH. Install OpenSSL or Git for Windows (includes openssl.exe)."
     exit 1
 }
@@ -45,7 +78,7 @@ $cnfContent | Out-File -FilePath $cnfPath -Encoding ascii
 if (Test-Path $keyPath) { Remove-Item $keyPath -Force }
 if (Test-Path $crtPath) { Remove-Item $crtPath -Force }
 
-& openssl req -x509 -nodes -days $ValidDays -newkey rsa:2048 `
+& $opensslPath req -x509 -nodes -days $ValidDays -newkey rsa:2048 `
     -keyout $keyPath -out $crtPath -config $cnfPath -extensions v3_req
 
 if ($LASTEXITCODE -ne 0) {
