@@ -5,6 +5,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS_ID = "${env.CG_DOCKERHUB_CREDENTIALS_ID ?: 'dockerhub-credentials'}"
     }
     stages {
+        // === ACTIVOS (HU-30/32 ELK + Jaeger) ===
         stage('Checkout') {
             steps {
                 checkout scm
@@ -75,7 +76,6 @@ pipeline {
                 }
             }
         }
-        // E2E Newman: ACTIVO — genera trafico multi-servicio para validar trazas Jaeger y logs ELK (HU-30/32)
         stage('E2E Tests - Newman') {
             steps {
                 echo 'Running Newman E2E tests inside Kubernetes cluster...'
@@ -94,8 +94,9 @@ pipeline {
                 }
             }
         }
+        // === DESHABILITADOS (when false) — no necesarios para ELK/Jaeger ===
         stage('Security Scan - OWASP ZAP') {
-            when { expression { false } }
+            when { expression { false } }  // TEMP: OWASP ZAP
             steps {
                 echo 'Running OWASP ZAP baseline scans against auth, form, and gateway services...'
                 bat 'if not exist zap-reports mkdir zap-reports'
@@ -131,7 +132,7 @@ pipeline {
             }
         }
         stage('Evaluate ZAP Results') {
-            when { expression { false } }
+            when { expression { false } }  // TEMP: OWASP ZAP
             steps {
                 script {
                     def classifyRisk = { alert ->
@@ -266,7 +267,7 @@ pipeline {
             }
         }
         stage('Performance Test - Locust') {
-            when { expression { false } }
+            when { expression { false } }  // TEMP: Locust
             steps {
                 echo 'Running Locust performance test inside Kubernetes cluster (with Prometheus exporter)...'
                 bat 'kubectl delete -f k8s/stage/locust-metrics.yaml --ignore-not-found=true'
@@ -288,7 +289,7 @@ pipeline {
             }
         }
         stage('Stress Test - Locust') {
-            when { expression { false } }
+            when { expression { false } }  // TEMP: Locust
             steps {
                 echo 'Running Locust stress test inside Kubernetes cluster...'
                 bat 'kubectl run locust-stress --restart=Never --image=locustio/locust:2.29.0 -n stage --command -- sleep 3600'
@@ -308,7 +309,7 @@ pipeline {
             }
         }
         stage('Generate Performance Report') {
-            when { expression { false } }
+            when { expression { false } }  // TEMP: Locust
             steps {
                 script {
                     def perfStats = ""
@@ -354,7 +355,6 @@ ${stressStats}
             }
         }
         stage('Promote dev to stage tag') {
-            when { expression { false } }
             steps {
                 script {
                     def services = [

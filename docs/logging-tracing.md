@@ -87,7 +87,7 @@ Para validar HU-30/HU-32 sin esperar quality gates completos, los Jenkinsfiles t
 | Pipeline | Stages activos | Stages deshabilitados (`when { false }`) |
 |----------|----------------|------------------------------------------|
 | **dev** (`jenkins/dev/Jenkinsfile-*`) | Checkout, Build JAR, Build Docker Image, Push `:dev` | Test (JaCoCo), SonarQube, Trivy |
-| **stage** (`jenkins/stage/Jenkinsfile-stage`) | Checkout, Pull images, Deploy to Stage, **Newman E2E** | OWASP ZAP, Locust, Promote `:stage` |
+| **stage** (`jenkins/stage/Jenkinsfile-stage`) | Checkout, Pull `:dev`, Deploy, **Newman E2E**, Push `:stage` | OWASP ZAP, Locust (perf + stress + reporte) |
 
 Newman E2E se mantiene activo porque dispara el flujo auth → identity → form → promotion → notification, necesario para validar trazas encadenadas en Jaeger y logs correlacionados por `traceId` en Kibana.
 
