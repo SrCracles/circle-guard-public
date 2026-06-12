@@ -35,7 +35,7 @@ spec:
     spec:
       containers:
         - name: webhook
-          image: ghcr.io/adnanh/webhook:v2.8.1
+          image: almir/webhook:2.8.1
           args:
             - -verbose
             - -hooks=/etc/webhook/hooks.yaml
