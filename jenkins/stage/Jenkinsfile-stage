@@ -379,10 +379,18 @@ ${stressStats}
     }
     post {
         failure {
+            script {
+                def notify = load 'jenkins/lib/pipeline-notifications.groovy'
+                notify.sendFailureNotification(pipelineName: 'circle-guard-stage')
+            }
             echo 'Stage pipeline failed. Resources left running for debugging.'
             echo 'Run manually to clean up: kubectl delete deployment,service,configmap,secret --all -n stage'
         }
         success {
+            script {
+                def notify = load 'jenkins/lib/pipeline-notifications.groovy'
+                notify.sendRecoveryNotification(pipelineName: 'circle-guard-stage')
+            }
             // TEMP (HU-30/32 ELK): mantener stage desplegado para validar logs en Kibana y trazas en Jaeger
             echo 'Stage pipeline succeeded. Stage namespace left running for ELK/Jaeger validation.'
             echo 'Manual cleanup when done: kubectl delete deployment,service,configmap,secret --all -n stage'

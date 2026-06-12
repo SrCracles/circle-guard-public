@@ -5,6 +5,7 @@ namespace: master
 
 resources:
   - ../base
+  - ingress.yaml
 
 commonLabels:
   environment: master

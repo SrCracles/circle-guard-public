@@ -182,7 +182,13 @@ Para garantizar que el código se mantiene con un estándar alto de calidad con 
 
 Ver detalle en [`docs/monitoring.md`](monitoring.md).
 
-## 8. Logging y Tracing (HU-30, HU-32)
+## 8. Seguridad operativa (HU-17, HU-36, HU-37)
+
+- **HU-17 — Notificaciones de pipeline**: bloques `post { failure/success }` en los 10 Jenkinsfiles; webhook Slack/Teams o email via `CG_NOTIFY_*`. Ver [`docs/pipeline-notifications.md`](pipeline-notifications.md).
+- **HU-36 — RBAC**: ServiceAccounts dedicados por microservicio; Jenkins limitado a dev/stage/master. Ver [`docs/rbac.md`](rbac.md).
+- **HU-37 — TLS**: Ingress NGINX en master con Secret `circleguard-tls`; auth y gateway solo por HTTPS. Ver [`docs/tls.md`](tls.md).
+
+## 9. Logging y Tracing (HU-30, HU-32)
 
 - **ELK** en namespace `infra`: Elasticsearch + Logstash + Kibana para logs centralizados JSON.
 - **Campos de log**: `timestamp`, `nivel`, `servicio`, `traceId`, `mensaje` via Logback + Logstash appender.
@@ -194,7 +200,7 @@ Ver detalle en [`docs/logging-tracing.md`](logging-tracing.md).
 
 ---
 
-## 9. Infraestructura de Análisis Estático para Dev (Paralelismo)
+## 10. Infraestructura de Análisis Estático para Dev (Paralelismo)
 
 Para soportar la ejecución simultánea de los 8 pipelines de desarrollo sin conflictos de puertos ni credenciales dinámicas, se realizaron los siguientes ajustes:
 

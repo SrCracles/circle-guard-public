@@ -69,10 +69,18 @@ pipeline {
     }
     post {
         success {
+            script {
+                def notify = load 'jenkins/lib/pipeline-notifications.groovy'
+                notify.sendRecoveryNotification(pipelineName: "${SERVICE_NAME} (dev)")
+            }
             echo "Pipeline succeeded for ${SERVICE_NAME}"
             bat "docker rmi %DOCKER_IMAGE%:dev || exit 0"
         }
         failure {
+            script {
+                def notify = load 'jenkins/lib/pipeline-notifications.groovy'
+                notify.sendFailureNotification(pipelineName: "${SERVICE_NAME} (dev)")
+            }
             echo "Pipeline failed for ${SERVICE_NAME}"
         }
     }

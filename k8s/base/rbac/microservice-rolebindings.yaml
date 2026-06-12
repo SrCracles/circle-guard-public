@@ -1,0 +1,119 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-auth-reader
+  labels:
+    app: circleguard-auth-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-auth-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-identity-reader
+  labels:
+    app: circleguard-identity-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-identity-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-form-reader
+  labels:
+    app: circleguard-form-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-form-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-promotion-reader
+  labels:
+    app: circleguard-promotion-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-promotion-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-notification-reader
+  labels:
+    app: circleguard-notification-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-notification-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-gateway-reader
+  labels:
+    app: circleguard-gateway-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-gateway-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-file-reader
+  labels:
+    app: circleguard-file-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-file-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: circleguard-dashboard-reader
+  labels:
+    app: circleguard-dashboard-service
+    app.kubernetes.io/component: microservice-rbac
+subjects:
+  - kind: ServiceAccount
+    name: circleguard-dashboard-sa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: microservice-reader

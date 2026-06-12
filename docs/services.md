@@ -120,7 +120,11 @@ circle-guard-public/
 │   ├── stage/
 │   │   └── kustomization.yaml           # Overlay Kustomize para namespace stage (tag :stage)
 │   └── master/
-│       └── kustomization.yaml           # Overlay Kustomize para namespace master (tag :stage)
+│       ├── kustomization.yaml           # Overlay Kustomize para namespace master (tag :stage)
+│       └── ingress.yaml                 # Ingress TLS para auth y gateway (HU-37)
+│   ├── rbac/                            # RBAC de Jenkins (HU-36)
+│   │   ├── jenkins-deployer.yaml
+│   │   └── jenkins-rolebindings.yaml
 │   ├── infra/                           # Dependencias externas (PostgreSQL, Kafka, Redis, Neo4j, OpenLDAP, Zookeeper, SonarQube, Prometheus, Grafana)
 │   │   ├── kustomization.yaml           # Despliegue conjunto de infraestructura
 │   │   ├── postgresql.yaml              # Deployment + Service PostgreSQL (puerto 5432)

@@ -19,7 +19,9 @@ Este script PowerShell automatiza la creacion del entorno local de desarrollo pa
 | **3. Namespaces** | Crea los namespaces: `dev`, `stage`, `master`, `infra` |
 | **4. Infraestructura** | Despliega PostgreSQL, Zookeeper, Kafka, Redis, Neo4j, OpenLDAP, SonarQube, Prometheus, Grafana, ELK y Jaeger en namespace `infra` |
 | **5. Verificacion** | Espera a que los pods de infra esten ready y muestra resumen del estado |
-| **6. Kubeconfig** | Exporta el kubeconfig a `kind-kubeconfig.yaml` para que Jenkins pueda usarlo |
+| **6. Ingress + TLS** | Instala NGINX Ingress, genera certificado autofirmado y crea Secret `circleguard-tls` en master (HU-37) |
+| **7. RBAC** | Aplica `k8s/rbac/` (Jenkins deployer) y secrets compartidos en dev/stage/master (HU-36) |
+| **8. Kubeconfig** | Exporta el kubeconfig a `kind-kubeconfig.yaml` para que Jenkins pueda usarlo |
 
 ---
 
@@ -188,3 +190,38 @@ terraform apply -var-file="envs/dev/terraform.tfvars"
 ```
 
 Antes de ejecutar, configurar el backend Azure Storage. Las variables sensibles `TF_VAR_postgres_password`, `TF_VAR_neo4j_password` y `TF_VAR_ldap_admin_password` son obligatorias para `stage` y `master`; en `dev` se pueden omitir porque no se despliega la infraestructura compartida.
+
+---
+
+## `scripts/generate-tls-cert.ps1` — Certificado TLS autofirmado (HU-37)
+
+Genera `k8s/master/certs/tls.crt` y `tls.key` con SAN para `circleguard.local`, `localhost` y `127.0.0.1`. Invocado automaticamente por `setup-kind.ps1`.
+
+```powershell
+.\scripts\generate-tls-cert.ps1
+.\scripts\generate-tls-cert.ps1 -ValidDays 730
+```
+
+---
+
+## `scripts/refresh-tls-secret.ps1` — Renovacion del Secret TLS (HU-37)
+
+Regenera el certificado y actualiza `circleguard-tls` en el namespace `master`:
+
+```powershell
+.\scripts\refresh-tls-secret.ps1
+```
+
+Ver [`docs/tls.md`](tls.md) para el flujo en cloud con Let's Encrypt.
+
+---
+
+## `scripts/setup-jenkins-kubeconfig.ps1` — Kubeconfig RBAC para Jenkins (HU-36)
+
+Crea `jenkins-kubeconfig-rbac.yaml` con el token del ServiceAccount `jenkins-deployer` (permisos solo en dev/stage/master):
+
+```powershell
+.\scripts\setup-jenkins-kubeconfig.ps1
+```
+
+Configurar esa ruta como `KUBECONFIG` en Jenkins. Ver [`docs/rbac.md`](rbac.md).

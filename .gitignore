@@ -49,6 +49,10 @@ neo4jdata/
 
 # Kind Cluster Kubeconfig (generated locally, do not commit)
 kind-kubeconfig.yaml
+jenkins-kubeconfig-rbac.yaml
+
+# TLS certificates (generated locally, do not commit)
+k8s/master/certs/
 
 # Terraform local state and working directories
 **/.terraform/

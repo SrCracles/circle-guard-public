@@ -101,6 +101,52 @@ foreach ($ns in $namespaces) {
     }
 }
 
+# Install NGINX Ingress Controller (TLS termination on ports 80/443)
+Write-Host "Installing NGINX Ingress Controller..."
+$ingressManifest = "https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/kind/deploy.yaml"
+kubectl apply -f $ingressManifest | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Failed to install NGINX Ingress Controller. TLS ingress may not work until it is installed."
+} else {
+    kubectl wait --namespace ingress-nginx --for=condition=ready pod -l app.kubernetes.io/component=controller --timeout=180s 2>$null
+    Write-Host "NGINX Ingress Controller ready."
+}
+
+# Bootstrap shared secrets (applied once; Jenkins SA has no secret write access per HU-36)
+Write-Host "Applying shared secrets to dev, stage and master..."
+$secretManifest = Join-Path $PSScriptRoot "k8s\base\secret.yaml"
+if (Test-Path $secretManifest) {
+    foreach ($appNs in @("dev", "stage", "master")) {
+        kubectl apply -f $secretManifest -n $appNs
+    }
+}
+
+# Apply Jenkins and cluster RBAC (HU-36)
+Write-Host "Applying RBAC manifests (Jenkins deployer + microservice policies)..."
+if (Test-Path "k8s/rbac/kustomization.yaml") {
+    kubectl apply -k k8s/rbac/
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Failed to apply k8s/rbac/. Review manifests."
+    } else {
+        Write-Host "RBAC applied for Jenkins (dev/stage/master) and microservice ServiceAccounts."
+    }
+}
+
+# Generate TLS certificate and create master secret (HU-37)
+Write-Host "Generating TLS certificate for master ingress..."
+$generateTlsScript = Join-Path $PSScriptRoot "scripts\generate-tls-cert.ps1"
+if (Test-Path $generateTlsScript) {
+    & $generateTlsScript
+    $certPath = Join-Path $PSScriptRoot "k8s\master\certs\tls.crt"
+    $keyPath = Join-Path $PSScriptRoot "k8s\master\certs\tls.key"
+    if ((Test-Path $certPath) -and (Test-Path $keyPath)) {
+        kubectl create secret tls circleguard-tls -n master --cert=$certPath --key=$keyPath --dry-run=client -o yaml | kubectl apply -f -
+        Write-Host "TLS secret 'circleguard-tls' created in namespace master."
+    }
+} else {
+    Write-Warning "scripts/generate-tls-cert.ps1 not found. Skipping TLS secret creation."
+}
+
 # Deploy Infrastructure
 if (-not $SkipInfra) {
     Write-Host "Deploying infrastructure services to namespace '$InfraNamespace'..."

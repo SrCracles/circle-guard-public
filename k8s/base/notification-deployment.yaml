@@ -14,6 +14,7 @@ spec:
       labels:
         app: circleguard-notification-service
     spec:
+      serviceAccountName: circleguard-notification-sa
       containers:
         - name: circleguard-notification-service
           image: circleguard-notification-service

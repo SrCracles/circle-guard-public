@@ -405,10 +405,18 @@ ${others ?: "- No other changes in this release."}
 
     post {
         success {
+            script {
+                def notify = load 'jenkins/lib/pipeline-notifications.groovy'
+                notify.sendRecoveryNotification(pipelineName: 'circle-guard-master')
+            }
             echo "Release v${env.VERSION} deployed to master namespace and published to GitHub"
         }
 
         failure {
+            script {
+                def notify = load 'jenkins/lib/pipeline-notifications.groovy'
+                notify.sendFailureNotification(pipelineName: 'circle-guard-master')
+            }
             echo "Master pipeline failed. Review logs and re-run."
         }
     }

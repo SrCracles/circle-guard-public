@@ -81,6 +81,9 @@ Estas variables centralizan la configuracion del proyecto. Solo se configuran un
 | `CG_GITHUB_OWNER` | `SrCracles` | Owner del repositorio GitHub |
 | `CG_GITHUB_REPO` | `circle-guard-public` | Nombre del repositorio GitHub |
 | `CG_TRIVY_SEVERITY_FAIL` | `CRITICAL` | Severidad minima que falla el pipeline en el escaneo Trivy. Valores validos: `CRITICAL` (default) o `HIGH,CRITICAL` |
+| `CG_NOTIFY_WEBHOOK_URL` | _(vacío)_ | Webhook de Slack o Teams para alertas de pipeline (HU-17) |
+| `CG_NOTIFY_EMAIL` | _(vacío)_ | Email del equipo DevOps para alertas de pipeline (HU-17) |
+| `CG_NOTIFY_WEBHOOK_TYPE` | `slack` | Formato del webhook: `slack` o `teams` (HU-17) |
 
 > **Nota:** Los valores de la tabla son los defaults del proyecto. Si alguien hace un fork o trabaja con su propia cuenta de DockerHub, solo debe cambiar estos valores aqui, sin tocar ningun Jenkinsfile.
 
@@ -110,8 +113,23 @@ Ir a **Manage Jenkins > Plugins > Available plugins** e instalar los que falten:
 | **HTML Publisher** | No | Ver el reporte HTML de Newman en Jenkins | No, opcional pero recomendado |
 | **JUnit** | Si (suggested plugins) | Publicar resultados de tests | Si, pero ya se tiene |
 | **Coverage** | No | Generar gráficos de tendencia de cobertura de pruebas en el dashboard | Si, para HU-23 |
+| **Email Extension** | No | Enviar notificaciones por email cuando falla un pipeline | Recomendado para HU-17 (alternativa: solo webhook) |
 
 > **Nota:** No es necesario instalar `Kubernetes CLI`. Los pipelines usan `kubectl` directamente como comando del sistema, no usan los steps especiales de Kubernetes de Jenkins.
+
+### 2.5 RBAC y kubeconfig limitado (HU-36)
+
+Tras ejecutar `setup-kind.ps1`, opcionalmente generar un kubeconfig con permisos minimos para Jenkins:
+
+```powershell
+.\scripts\setup-jenkins-kubeconfig.ps1
+```
+
+Usar `jenkins-kubeconfig-rbac.yaml` como `KUBECONFIG` en Jenkins en lugar del kubeconfig de administrador. Ver [`docs/rbac.md`](rbac.md).
+
+### 2.6 Notificaciones de pipelines (HU-17)
+
+Configurar al menos `CG_NOTIFY_WEBHOOK_URL` o `CG_NOTIFY_EMAIL` en Global Properties. Ver [`docs/pipeline-notifications.md`](pipeline-notifications.md).
 
 ---
 
@@ -216,7 +234,17 @@ kubectl port-forward -n infra svc/grafana 3000:3000
 kubectl port-forward -n infra svc/prometheus 9090:9090
 ```
 
-Ver documentacion completa de monitoreo en [`docs/monitoring.md`](monitoring.md) y de logging/tracing en [`docs/logging-tracing.md`](logging-tracing.md).
+Ver documentacion completa de monitoreo en [`docs/monitoring.md`](monitoring.md), logging/tracing en [`docs/logging-tracing.md`](logging-tracing.md), RBAC en [`docs/rbac.md`](rbac.md) y TLS en [`docs/tls.md`](tls.md).
+
+### HTTPS en master (HU-37)
+
+Tras el pipeline master, auth y gateway se exponen solo por HTTPS:
+
+```powershell
+curl -k -X POST https://localhost/auth/api/v1/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}'
+```
+
+El flag `-k` acepta el certificado autofirmado de Kind. Ver [`docs/tls.md`](tls.md) para renovacion.
 
 ---
 

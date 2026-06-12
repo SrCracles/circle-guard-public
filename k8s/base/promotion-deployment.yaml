@@ -14,6 +14,7 @@ spec:
       labels:
         app: circleguard-promotion-service
     spec:
+      serviceAccountName: circleguard-promotion-sa
       containers:
         - name: circleguard-promotion-service
           image: circleguard-promotion-service

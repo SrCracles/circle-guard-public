@@ -118,7 +118,8 @@ Con Kind + `setup-kind.ps1`, Kibana y Jaeger ya estan en `localhost:5601` y `loc
 
 ```powershell
 # Login E2E (genera traza auth -> identity)
-curl -X POST http://localhost/auth/api/v1/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}'
+# En master con TLS (HU-37): usar HTTPS; -k acepta cert autofirmado en Kind
+curl -k -X POST https://localhost/auth/api/v1/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin"}'
 
 # Buscar trazas en Jaeger: servicio circleguard-auth-service
 # Abrir http://localhost:16686
