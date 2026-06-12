@@ -56,3 +56,15 @@ data:
   # Feature Toggles
   FEATURE_TOGGLE_EMAIL_ENABLED: "true"
 
+  # Distributed tracing (Jaeger via Zipkin API)
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: "http://jaeger.infra.svc.cluster.local:9411/api/v2/spans"
+
+  # Centralized logging (ELK / Logstash)
+  LOGSTASH_HOST: "logstash.infra.svc.cluster.local"
+  LOGSTASH_PORT: "5044"
+
+  # Kafka tracing propagation
+  SPRING_KAFKA_TEMPLATE_OBSERVATION_ENABLED: "true"
+  SPRING_KAFKA_LISTENER_OBSERVATION_ENABLED: "true"
+

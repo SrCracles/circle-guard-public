@@ -58,6 +58,12 @@ nodes:
       - containerPort: 30300
         hostPort: 3000
         protocol: TCP
+      - containerPort: 30561
+        hostPort: 5601
+        protocol: TCP
+      - containerPort: 31686
+        hostPort: 16686
+        protocol: TCP
   - role: worker
 "@
 
@@ -105,6 +111,13 @@ if (-not $SkipInfra) {
         if (Test-Path $dashboardSrc) {
             New-Item -ItemType Directory -Force -Path $dashboardDst | Out-Null
             Copy-Item (Join-Path $dashboardSrc "*.json") $dashboardDst -Force
+        }
+
+        $kibanaSrc = Join-Path $PSScriptRoot "docs\kibana-dashboards"
+        $kibanaDst = Join-Path $PSScriptRoot "k8s\infra\kibana-dashboards"
+        if (Test-Path $kibanaSrc) {
+            New-Item -ItemType Directory -Force -Path $kibanaDst | Out-Null
+            Copy-Item (Join-Path $kibanaSrc "*.ndjson") $kibanaDst -Force
         }
 
         kubectl apply -k k8s/infra/ -n $InfraNamespace
@@ -176,6 +189,7 @@ Write-Host "       $kubeconfigPath"
 Write-Host "  4. Create Jenkins jobs pointing to the Jenkinsfiles in jenkins/"
 Write-Host "  5. Run dev pipelines to build and deploy services"
 Write-Host "  6. Open Grafana at http://localhost:3000 (admin/admin) and Prometheus at http://localhost:9090"
+Write-Host "  7. Open Kibana at http://localhost:5601 and Jaeger at http://localhost:16686"
 Write-Host ""
 Write-Host "IMPORTANT:"
 Write-Host "  Every time you recreate the cluster, the kubeconfig changes."

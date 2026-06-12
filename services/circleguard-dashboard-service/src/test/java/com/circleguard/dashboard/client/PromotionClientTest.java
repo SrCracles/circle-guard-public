@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,7 +26,7 @@ public class PromotionClientTest {
 
     @BeforeEach
     void setUp() {
-        client = new PromotionClient();
+        client = new PromotionClient(new RestTemplateBuilder());
         ReflectionTestUtils.setField(client, "promotionServiceUrl", "http://promotion:8088");
         ReflectionTestUtils.setField(client, "restTemplate", restTemplate);
     }

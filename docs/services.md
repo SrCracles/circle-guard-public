@@ -130,7 +130,11 @@ circle-guard-public/
 │   │   ├── neo4j.yaml                   # Deployment + Service Neo4j (puertos 7687, 7474)
 │   │   ├── openldap.yaml                # Deployment + Service OpenLDAP (puertos 389, 636)
 │   │   ├── prometheus.yaml              # Prometheus + scrape configs de microservicios
-│   │   └── grafana.yaml                 # Grafana + dashboards y alertas provisionadas
+│   │   ├── grafana.yaml                 # Grafana + dashboards y alertas provisionadas
+│   │   ├── elasticsearch.yaml           # Elasticsearch para logs centralizados
+│   │   ├── logstash.yaml                # Logstash ingest de logs JSON
+│   │   ├── kibana.yaml                  # Kibana + dashboards de logs
+│   │   └── jaeger.yaml                  # Jaeger tracing distribuido
 │   ├── grafana-dashboards/              # Dashboards exportados en JSON (versionados)
 ├── jenkins/
 │   ├── dev/

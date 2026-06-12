@@ -31,7 +31,7 @@ Desde la raiz del proyecto ejecutar:
 Este script crea:
 - El cluster de Kind
 - Los namespaces: `dev`, `stage`, `master`, `infra`
-- Los servicios de infraestructura: PostgreSQL, Kafka, Redis, Neo4j, Zookeeper, OpenLDAP, SonarQube, Prometheus, Grafana
+- Los servicios de infraestructura: PostgreSQL, Kafka, Redis, Neo4j, Zookeeper, OpenLDAP, SonarQube, Prometheus, Grafana, ELK (Elasticsearch, Logstash, Kibana) y Jaeger
 - Exporta el kubeconfig a `kind-kubeconfig.yaml`
 
 Al finalizar, anotar la ruta del kubeconfig que muestra en pantalla.
@@ -216,7 +216,7 @@ kubectl port-forward -n infra svc/grafana 3000:3000
 kubectl port-forward -n infra svc/prometheus 9090:9090
 ```
 
-Ver documentacion completa de monitoreo en [`docs/monitoring.md`](monitoring.md).
+Ver documentacion completa de monitoreo en [`docs/monitoring.md`](monitoring.md) y de logging/tracing en [`docs/logging-tracing.md`](logging-tracing.md).
 
 ---
 

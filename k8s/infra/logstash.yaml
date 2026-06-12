@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash-config
+  labels:
+    app: logstash
+    component: infrastructure
+data:
+  logstash.conf: |
+    input {
+      tcp {
+        port => 5044
+        codec => json_lines
+      }
+    }
+
+    filter {
+      if ![timestamp] and [@timestamp] {
+        mutate {
+          rename => { "@timestamp" => "timestamp" }
+        }
+      }
+      if ![servicio] and [service] {
+        mutate {
+          rename => { "service" => "servicio" }
+        }
+      }
+      if ![nivel] and [level] {
+        mutate {
+          rename => { "level" => "nivel" }
+        }
+      }
+      if ![mensaje] and [message] {
+        mutate {
+          rename => { "message" => "mensaje" }
+        }
+      }
+    }
+
+    output {
+      elasticsearch {
+        hosts => ["http://elasticsearch.infra.svc.cluster.local:9200"]
+        index => "circleguard-logs-%{+YYYY.MM.dd}"
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logstash
+  labels:
+    app: logstash
+    component: infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: logstash
+  template:
+    metadata:
+      labels:
+        app: logstash
+        component: infrastructure
+    spec:
+      containers:
+        - name: logstash
+          image: docker.elastic.co/logstash/logstash:8.11.3
+          ports:
+            - containerPort: 5044
+              name: tcp
+          env:
+            - name: LS_JAVA_OPTS
+              value: "-Xms256m -Xmx256m"
+          volumeMounts:
+            - name: logstash-config
+              mountPath: /usr/share/logstash/pipeline/logstash.conf
+              subPath: logstash.conf
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 200m
+            limits:
+              memory: 768Mi
+              cpu: "1"
+          readinessProbe:
+            tcpSocket:
+              port: 5044
+            initialDelaySeconds: 45
+            periodSeconds: 10
+      volumes:
+        - name: logstash-config
+          configMap:
+            name: logstash-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logstash
+  labels:
+    app: logstash
+    component: infrastructure
+spec:
+  selector:
+    app: logstash
+  ports:
+    - port: 5044
+      targetPort: 5044
+      name: tcp
+  type: ClusterIP

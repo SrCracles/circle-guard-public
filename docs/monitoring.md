@@ -2,6 +2,8 @@
 
 CircleGuard expone metricas tecnicas y de negocio mediante **Micrometer + Spring Boot Actuator**, las recolecta **Prometheus** en el namespace `infra` y las visualiza en **Grafana** con dashboards y alertas automaticas.
 
+> Para logging centralizado (ELK) y tracing distribuido (Jaeger), ver [`docs/logging-tracing.md`](logging-tracing.md) (HU-30, HU-32).
+
 ## Componentes desplegados (namespace `infra`)
 
 | Componente | Proposito | Acceso local (Kind) |

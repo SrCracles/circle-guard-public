@@ -87,4 +87,12 @@ subprojects {
         useJUnitPlatform()
         finalizedBy("jacocoTestReport", "jacocoTestCoverageVerification")
     }
+
+    plugins.withId("org.springframework.boot") {
+        dependencies {
+            add("implementation", "io.micrometer:micrometer-tracing-bridge-brave")
+            add("implementation", "io.zipkin.reporter2:zipkin-reporter-brave")
+            add("implementation", "net.logstash.logback:logstash-logback-encoder:8.0")
+        }
+    }
 }

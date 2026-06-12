@@ -1,10 +1,11 @@
 package com.circleguard.auth.client;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import java.time.Duration;
 import java.util.*;
 
 @Component
@@ -14,11 +15,11 @@ public class IdentityClient {
     @Value("${identity.service.url:http://localhost:8083}")
     private String identityServiceUrl;
 
-    public IdentityClient() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(3000);
-        factory.setReadTimeout(3000);
-        this.restTemplate = new RestTemplate(factory);
+    public IdentityClient(RestTemplateBuilder restTemplateBuilder) {
+        this.restTemplate = restTemplateBuilder
+                .connectTimeout(Duration.ofMillis(3000))
+                .readTimeout(Duration.ofMillis(3000))
+                .build();
     }
 
     @CircuitBreaker(name = "identityService", fallbackMethod = "getAnonymousIdFallback")

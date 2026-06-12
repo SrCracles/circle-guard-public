@@ -182,9 +182,19 @@ Para garantizar que el código se mantiene con un estándar alto de calidad con 
 
 Ver detalle en [`docs/monitoring.md`](monitoring.md).
 
+## 8. Logging y Tracing (HU-30, HU-32)
+
+- **ELK** en namespace `infra`: Elasticsearch + Logstash + Kibana para logs centralizados JSON.
+- **Campos de log**: `timestamp`, `nivel`, `servicio`, `traceId`, `mensaje` via Logback + Logstash appender.
+- **Kibana**: index pattern `circleguard-logs-*` y dashboard de errores por servicio.
+- **Jaeger**: tracing distribuido con Micrometer Tracing; correlacion logs-trazas por `traceId`.
+- **Propagacion**: HTTP (`RestTemplateBuilder`) y Kafka (`observation-enabled`).
+
+Ver detalle en [`docs/logging-tracing.md`](logging-tracing.md).
+
 ---
 
-## 8. Infraestructura de Análisis Estático para Dev (Paralelismo)
+## 9. Infraestructura de Análisis Estático para Dev (Paralelismo)
 
 Para soportar la ejecución simultánea de los 8 pipelines de desarrollo sin conflictos de puertos ni credenciales dinámicas, se realizaron los siguientes ajustes:
 

@@ -14,6 +14,11 @@ resources:
   - prometheus.yaml
   - alert-webhook.yaml
   - grafana.yaml
+  - elasticsearch.yaml
+  - logstash.yaml
+  - kibana.yaml
+  - kibana-setup.yaml
+  - jaeger.yaml
 
 configMapGenerator:
   - name: grafana-dashboards
@@ -21,6 +26,9 @@ configMapGenerator:
       - grafana-dashboards/circleguard-system-overview.json
       - grafana-dashboards/circleguard-service-detail.json
       - grafana-dashboards/circleguard-business-metrics.json
+  - name: kibana-saved-objects
+    files:
+      - kibana-dashboards/circleguard-saved-objects.ndjson
 
 labels:
   - pairs:
