@@ -118,4 +118,4 @@ curl http://localhost:9090/api/v1/targets
 | `k8s/infra/node-exporter.yaml` | Metricas de nodos |
 | `k8s/infra/alert-webhook.yaml` | Webhook receptor de alertas |
 | `k8s/stage/locust-metrics.yaml` | Pod Locust + exporter para pruebas de carga |
-| `docs/grafana-dashboards/*.json` | Dashboards versionados |
+| `docs/grafana-dashboards/*.json` | Dashboards versionados (fuente canonica; `setup-kind.ps1` los copia a `k8s/infra/grafana-dashboards/` antes del deploy) |

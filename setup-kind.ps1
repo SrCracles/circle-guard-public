@@ -100,6 +100,13 @@ if (-not $SkipInfra) {
     Write-Host "Deploying infrastructure services to namespace '$InfraNamespace'..."
 
     if (Test-Path "k8s/infra/kustomization.yaml") {
+        $dashboardSrc = Join-Path $PSScriptRoot "docs\grafana-dashboards"
+        $dashboardDst = Join-Path $PSScriptRoot "k8s\infra\grafana-dashboards"
+        if (Test-Path $dashboardSrc) {
+            New-Item -ItemType Directory -Force -Path $dashboardDst | Out-Null
+            Copy-Item (Join-Path $dashboardSrc "*.json") $dashboardDst -Force
+        }
+
         kubectl apply -k k8s/infra/ -n $InfraNamespace
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to deploy infrastructure. Check k8s/infra/ manifests."

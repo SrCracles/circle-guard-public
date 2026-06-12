@@ -1,0 +1,129 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(increase(circleguard_business_surveys_submitted_total{namespace=~\"$namespace\"}[1h]))",
+          "legendFormat": "surveys/hour",
+          "refId": "A"
+        }
+      ],
+      "title": "Health surveys submitted per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum by (status) (increase(circleguard_business_status_promoted_total{status=~\"CONFIRMED|SUSPECT\",namespace=~\"$namespace\"}[1h]))",
+          "legendFormat": "{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Status promotions to CONFIRMED / SUSPECT per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum by (decision) (increase(circleguard_business_campus_access_total{namespace=~\"$namespace\"}[1h]))",
+          "legendFormat": "{{decision}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Campus access GREEN vs RED per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(increase(circleguard_business_notifications_sent_total{namespace=~\"$namespace\"}[1h]))",
+          "legendFormat": "notifications/hour",
+          "refId": "A"
+        }
+      ],
+      "title": "Notification alerts sent per hour",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "circleguard_business_surveys_submitted_total{namespace=~\"$namespace\"}",
+          "legendFormat": "total surveys",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(circleguard_business_status_promoted_total{namespace=~\"$namespace\"})",
+          "legendFormat": "total promotions",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(circleguard_business_campus_access_total{namespace=~\"$namespace\"})",
+          "legendFormat": "total access checks",
+          "refId": "C"
+        },
+        {
+          "expr": "circleguard_business_notifications_sent_total{namespace=~\"$namespace\"}",
+          "legendFormat": "total notifications",
+          "refId": "D"
+        }
+      ],
+      "title": "Cumulative business counters",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["circleguard", "business"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": true, "text": "stage", "value": "stage" },
+        "hide": 0,
+        "label": "Namespace",
+        "name": "namespace",
+        "options": [
+          { "selected": false, "text": "dev", "value": "dev" },
+          { "selected": true, "text": "stage", "value": "stage" },
+          { "selected": false, "text": "master", "value": "master" }
+        ],
+        "query": "dev,stage,master",
+        "type": "custom"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d"]
+  },
+  "timezone": "browser",
+  "title": "CircleGuard - Business Metrics",
+  "uid": "cg-business-metrics",
+  "version": 1
+}

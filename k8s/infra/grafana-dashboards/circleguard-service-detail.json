@@ -1,0 +1,136 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$service\",namespace=~\"$namespace\"}[1m]))",
+          "legendFormat": "RPS",
+          "refId": "A"
+        }
+      ],
+      "title": "RPS - $service",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application=\"$service\",namespace=~\"$namespace\"}[5m]))) * 1000",
+          "legendFormat": "p95",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_sum{application=\"$service\",namespace=~\"$namespace\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"$service\",namespace=~\"$namespace\"}[5m])) * 1000",
+          "legendFormat": "avg",
+          "refId": "B"
+        }
+      ],
+      "title": "HTTP latency - $service",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100, "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{application=\"$service\",status=~\"5..\",namespace=~\"$namespace\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"$service\",namespace=~\"$namespace\"}[5m])) * 100",
+          "legendFormat": "5xx %",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP error rate - $service",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "process_cpu_usage{application=\"$service\",namespace=~\"$namespace\"}",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "title": "CPU usage - $service",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{application=\"$service\",area=\"heap\",namespace=~\"$namespace\"}",
+          "legendFormat": "heap used",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{application=\"$service\",area=\"heap\",namespace=~\"$namespace\"}",
+          "legendFormat": "heap max",
+          "refId": "B"
+        }
+      ],
+      "title": "JVM memory - $service",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["circleguard", "service"],
+  "templating": {
+    "list": [
+      {
+        "current": { "selected": true, "text": "stage", "value": "stage" },
+        "hide": 0,
+        "label": "Namespace",
+        "name": "namespace",
+        "options": [
+          { "selected": false, "text": "dev", "value": "dev" },
+          { "selected": true, "text": "stage", "value": "stage" },
+          { "selected": false, "text": "master", "value": "master" }
+        ],
+        "query": "dev,stage,master",
+        "type": "custom"
+      },
+      {
+        "current": { "selected": true, "text": "circleguard-auth-service", "value": "circleguard-auth-service" },
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "definition": "label_values(http_server_requests_seconds_count, application)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Service",
+        "name": "service",
+        "query": { "query": "label_values(http_server_requests_seconds_count, application)", "refId": "StandardVariableQuery" },
+        "refresh": 2,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d"]
+  },
+  "timezone": "browser",
+  "title": "CircleGuard - Service Detail",
+  "uid": "cg-service-detail",
+  "version": 1
+}

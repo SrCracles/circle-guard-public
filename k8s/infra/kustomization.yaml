@@ -18,9 +18,11 @@ resources:
 configMapGenerator:
   - name: grafana-dashboards
     files:
-      - ../../docs/grafana-dashboards/circleguard-system-overview.json
-      - ../../docs/grafana-dashboards/circleguard-service-detail.json
-      - ../../docs/grafana-dashboards/circleguard-business-metrics.json
+      - grafana-dashboards/circleguard-system-overview.json
+      - grafana-dashboards/circleguard-service-detail.json
+      - grafana-dashboards/circleguard-business-metrics.json
 
-commonLabels:
-  component: infrastructure
+labels:
+  - pairs:
+      component: infrastructure
+    includeSelectors: true
