@@ -52,6 +52,12 @@ nodes:
       - containerPort: 30090
         hostPort: 9000
         protocol: TCP
+      - containerPort: 30091
+        hostPort: 9090
+        protocol: TCP
+      - containerPort: 30300
+        hostPort: 3000
+        protocol: TCP
   - role: worker
 "@
 
@@ -162,6 +168,7 @@ Write-Host "  3. Set KUBECONFIG environment variable in Jenkins to:"
 Write-Host "       $kubeconfigPath"
 Write-Host "  4. Create Jenkins jobs pointing to the Jenkinsfiles in jenkins/"
 Write-Host "  5. Run dev pipelines to build and deploy services"
+Write-Host "  6. Open Grafana at http://localhost:3000 (admin/admin) and Prometheus at http://localhost:9090"
 Write-Host ""
 Write-Host "IMPORTANT:"
 Write-Host "  Every time you recreate the cluster, the kubeconfig changes."

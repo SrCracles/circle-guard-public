@@ -28,6 +28,10 @@ spec:
           env:
             - name: SPRING_APPLICATION_NAME
               value: "circleguard-form-service"
+            - name: MANAGEMENT_METRICS_TAGS_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             - name: SPRING_DATASOURCE_URL
               value: "jdbc:postgresql://postgresql.infra.svc.cluster.local:5432/circleguard_form"
           readinessProbe:

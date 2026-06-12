@@ -28,6 +28,10 @@ spec:
           env:
             - name: SPRING_APPLICATION_NAME
               value: "circleguard-file-service"
+            - name: MANAGEMENT_METRICS_TAGS_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness

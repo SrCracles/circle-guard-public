@@ -1,5 +1,6 @@
 package com.circleguard.gateway.service;
 
+import com.circleguard.gateway.metrics.BusinessMetrics;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -14,6 +15,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class QrValidationService {
     private final StringRedisTemplate redisTemplate;
+    private final BusinessMetrics businessMetrics;
 
     @Value("${qr.secret}")
     private String qrSecret;
@@ -35,12 +37,15 @@ public class QrValidationService {
             String status = redisTemplate.opsForValue().get(STATUS_KEY_PREFIX + anonymousId);
             
             if ("CONTAGIED".equals(status) || "POTENTIAL".equals(status)) {
+                businessMetrics.recordCampusAccess("RED");
                 return new ValidationResult(false, "RED", "Access Denied: Health Risk Detected");
             }
 
+            businessMetrics.recordCampusAccess("GREEN");
             return new ValidationResult(true, "GREEN", "Welcome to Campus");
-            
+
         } catch (Exception e) {
+            businessMetrics.recordCampusAccess("RED");
             return new ValidationResult(false, "RED", "Invalid or Expired Token");
         }
     }

@@ -1,0 +1,355 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  labels:
+    app: grafana
+    component: infrastructure
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus.infra.svc.cluster.local:9090
+        isDefault: true
+        editable: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards-provider
+  labels:
+    app: grafana
+    component: infrastructure
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: circleguard
+        orgId: 1
+        folder: CircleGuard
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting-contactpoints
+  labels:
+    app: grafana
+    component: infrastructure
+data:
+  contactpoints.yaml: |
+    apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: circleguard-webhook
+        receivers:
+          - uid: circleguard-webhook-receiver
+            type: webhook
+            settings:
+              url: http://alert-webhook.infra.svc.cluster.local:9000/hooks/grafana-alerts
+              httpMethod: POST
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting-policies
+  labels:
+    app: grafana
+    component: infrastructure
+data:
+  policies.yaml: |
+    apiVersion: 1
+    policies:
+      - orgId: 1
+        receiver: circleguard-webhook
+        group_by: ['alertname', 'service']
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 4h
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting-rules
+  labels:
+    app: grafana
+    component: infrastructure
+data:
+  circleguard-alerts.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: circleguard-critical
+        folder: CircleGuard Alerts
+        interval: 1m
+        rules:
+          - uid: cg-http-error-rate
+            title: HTTP error rate above 5%
+            condition: C
+            for: 2m
+            noDataState: OK
+            execErrState: Error
+            annotations:
+              summary: "Service {{ $labels.application }} has HTTP error rate above 5%"
+              description: "Critical: more than 5% of HTTP responses are 5xx in the last 5 minutes."
+            labels:
+              severity: critical
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  expr: sum by (application) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum by (application) (rate(http_server_requests_seconds_count[5m])) * 100
+                  refId: A
+              - refId: B
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: reduce
+                  expression: A
+                  reducer: last
+                  refId: B
+              - refId: C
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: B
+                  conditions:
+                    - evaluator:
+                        params: [5]
+                        type: gt
+                  refId: C
+          - uid: cg-latency-p95
+            title: P95 latency above 1000ms (auth/gateway)
+            condition: C
+            for: 2m
+            noDataState: OK
+            execErrState: Error
+            annotations:
+              summary: "High latency on {{ $labels.application }}"
+              description: "Warning: P95 HTTP latency exceeds 1000ms on auth-service or gateway-service."
+            labels:
+              severity: warning
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  expr: histogram_quantile(0.95, sum by (le, application) (rate(http_server_requests_seconds_bucket{application=~"circleguard-auth-service|circleguard-gateway-service"}[5m]))) * 1000
+                  refId: A
+              - refId: B
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: reduce
+                  expression: A
+                  reducer: last
+                  refId: B
+              - refId: C
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: B
+                  conditions:
+                    - evaluator:
+                        params: [1000]
+                        type: gt
+                  refId: C
+          - uid: cg-crashloop
+            title: Microservice pod in CrashLoopBackOff
+            condition: C
+            for: 1m
+            noDataState: OK
+            execErrState: Error
+            annotations:
+              summary: "Pod {{ $labels.pod }} in CrashLoopBackOff"
+              description: "Critical: a CircleGuard microservice pod is restarting repeatedly."
+            labels:
+              severity: critical
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  expr: kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", namespace=~"dev|stage|master", pod=~"circleguard-.*"}
+                  refId: A
+              - refId: B
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: reduce
+                  expression: A
+                  reducer: last
+                  refId: B
+              - refId: C
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: B
+                  conditions:
+                    - evaluator:
+                        params: [0]
+                        type: gt
+                  refId: C
+          - uid: cg-low-memory
+            title: Cluster memory available below 20%
+            condition: C
+            for: 3m
+            noDataState: OK
+            execErrState: Error
+            annotations:
+              summary: "Low memory on node {{ $labels.instance }}"
+              description: "Warning: available memory is below 20% of total on a cluster node."
+            labels:
+              severity: warning
+            data:
+              - refId: A
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: prometheus
+                model:
+                  expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+                  refId: A
+              - refId: B
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: reduce
+                  expression: A
+                  reducer: min
+                  refId: B
+              - refId: C
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                datasourceUid: __expr__
+                model:
+                  type: threshold
+                  expression: B
+                  conditions:
+                    - evaluator:
+                        params: [20]
+                        type: lt
+                  refId: C
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+    component: infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+        component: infrastructure
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.4.2
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: admin
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_UNIFIED_ALERTING_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboards-provider
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+            - name: alerting-contactpoints
+              mountPath: /etc/grafana/provisioning/alerting/contactpoints.yaml
+              subPath: contactpoints.yaml
+            - name: alerting-policies
+              mountPath: /etc/grafana/provisioning/alerting/policies.yaml
+              subPath: policies.yaml
+            - name: alerting-rules
+              mountPath: /etc/grafana/provisioning/alerting/rules
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "300m"
+      volumes:
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: dashboards-provider
+          configMap:
+            name: grafana-dashboards-provider
+        - name: dashboards
+          configMap:
+            name: grafana-dashboards
+        - name: alerting-contactpoints
+          configMap:
+            name: grafana-alerting-contactpoints
+        - name: alerting-policies
+          configMap:
+            name: grafana-alerting-policies
+        - name: alerting-rules
+          configMap:
+            name: grafana-alerting-rules
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  labels:
+    app: grafana
+    component: infrastructure
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30300
+  selector:
+    app: grafana

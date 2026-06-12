@@ -31,7 +31,7 @@ Desde la raiz del proyecto ejecutar:
 Este script crea:
 - El cluster de Kind
 - Los namespaces: `dev`, `stage`, `master`, `infra`
-- Los servicios de infraestructura: PostgreSQL, Kafka, Redis, Neo4j, Zookeeper, OpenLDAP, SonarQube
+- Los servicios de infraestructura: PostgreSQL, Kafka, Redis, Neo4j, Zookeeper, OpenLDAP, SonarQube, Prometheus, Grafana
 - Exporta el kubeconfig a `kind-kubeconfig.yaml`
 
 Al finalizar, anotar la ruta del kubeconfig que muestra en pantalla.
@@ -209,7 +209,14 @@ kubectl logs -n master -l app=circleguard-auth-service
 
 # Acceder a la interfaz de SonarQube (credenciales: admin/admin)
 kubectl port-forward -n infra svc/sonarqube 9000:9000
+
+# Acceder a Grafana (credenciales: admin/admin) y Prometheus
+# Con Kind + setup-kind.ps1 ya estan en localhost:3000 y localhost:9090
+kubectl port-forward -n infra svc/grafana 3000:3000
+kubectl port-forward -n infra svc/prometheus 9090:9090
 ```
+
+Ver documentacion completa de monitoreo en [`docs/monitoring.md`](monitoring.md).
 
 ---
 

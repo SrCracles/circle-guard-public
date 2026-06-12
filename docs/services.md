@@ -121,14 +121,17 @@ circle-guard-public/
 │   │   └── kustomization.yaml           # Overlay Kustomize para namespace stage (tag :stage)
 │   └── master/
 │       └── kustomization.yaml           # Overlay Kustomize para namespace master (tag :stage)
-│   ├── infra/                           # Dependencias externas (PostgreSQL, Kafka, Redis, Neo4j, OpenLDAP, Zookeeper)
+│   ├── infra/                           # Dependencias externas (PostgreSQL, Kafka, Redis, Neo4j, OpenLDAP, Zookeeper, SonarQube, Prometheus, Grafana)
 │   │   ├── kustomization.yaml           # Despliegue conjunto de infraestructura
 │   │   ├── postgresql.yaml              # Deployment + Service PostgreSQL (puerto 5432)
 │   │   ├── zookeeper.yaml               # Deployment + Service Zookeeper (puerto 2181)
 │   │   ├── kafka.yaml                   # Deployment + Service Kafka (puerto 9092)
 │   │   ├── redis.yaml                   # Deployment + Service Redis (puerto 6379)
 │   │   ├── neo4j.yaml                   # Deployment + Service Neo4j (puertos 7687, 7474)
-│   │   └── openldap.yaml                # Deployment + Service OpenLDAP (puertos 389, 636)
+│   │   ├── openldap.yaml                # Deployment + Service OpenLDAP (puertos 389, 636)
+│   │   ├── prometheus.yaml              # Prometheus + scrape configs de microservicios
+│   │   └── grafana.yaml                 # Grafana + dashboards y alertas provisionadas
+│   ├── grafana-dashboards/              # Dashboards exportados en JSON (versionados)
 ├── jenkins/
 │   ├── dev/
 │   │   ├── Jenkinsfile-auth             # Pipeline dev para auth-service

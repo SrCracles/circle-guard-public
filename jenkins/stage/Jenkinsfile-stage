@@ -264,16 +264,18 @@ pipeline {
         }
         stage('Performance Test - Locust') {
             steps {
-                echo 'Running Locust performance test inside Kubernetes cluster...'
-                bat 'kubectl run locust-perf --restart=Never --image=locustio/locust:2.29.0 -n stage --command -- sleep 3600'
-                bat 'kubectl wait --for=condition=ready pod/locust-perf -n stage --timeout=60s'
+                echo 'Running Locust performance test inside Kubernetes cluster (with Prometheus exporter)...'
+                bat 'kubectl delete -f k8s/stage/locust-metrics.yaml --ignore-not-found=true'
+                bat 'kubectl apply -f k8s/stage/locust-metrics.yaml'
+                bat 'kubectl wait --for=condition=ready pod/locust-perf -n stage --timeout=120s'
                 bat 'ping 127.0.0.1 -n 6 > nul'
-                bat 'kubectl cp "%LOCUST_PERF_FILE%" locust-perf:/tmp/locustfile.py -n stage -c locust-perf'
-                bat 'kubectl exec locust-perf -n stage -c locust-perf -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 20 -r 2 --run-time 60s --headless --csv=/tmp/locust-performance'
-                bat 'kubectl cp locust-perf:/tmp/locust-performance_stats.csv locust-performance_stats.csv -n stage -c locust-perf || echo "No perf stats"'
-                bat 'kubectl cp locust-perf:/tmp/locust-performance_failures.csv locust-performance_failures.csv -n stage -c locust-perf || echo "No perf failures"'
-                bat 'kubectl cp locust-perf:/tmp/locust-performance_exceptions.csv locust-performance_exceptions.csv -n stage -c locust-perf || echo "No perf exceptions"'
-                bat 'kubectl delete pod locust-perf -n stage --ignore-not-found=true'
+                bat 'kubectl cp "%LOCUST_PERF_FILE%" locust-perf:/tmp/locustfile.py -n stage -c locust'
+                bat 'kubectl exec locust-perf -n stage -c locust -- locust -f /tmp/locustfile.py --host http://circleguard-auth-service:8180 -u 20 -r 2 --run-time 60s --web-host 0.0.0.0 --web-port 8089 --headless --csv=/tmp/locust-performance'
+                bat 'ping 127.0.0.1 -n 31 > nul'
+                bat 'kubectl cp locust-perf:/tmp/locust-performance_stats.csv locust-performance_stats.csv -n stage -c locust || echo "No perf stats"'
+                bat 'kubectl cp locust-perf:/tmp/locust-performance_failures.csv locust-performance_failures.csv -n stage -c locust || echo "No perf failures"'
+                bat 'kubectl cp locust-perf:/tmp/locust-performance_exceptions.csv locust-performance_exceptions.csv -n stage -c locust || echo "No perf exceptions"'
+                bat 'kubectl delete -f k8s/stage/locust-metrics.yaml --ignore-not-found=true'
             }
             post {
                 always {

@@ -28,6 +28,10 @@ spec:
           env:
             - name: SPRING_APPLICATION_NAME
               value: "circleguard-notification-service"
+            - name: MANAGEMENT_METRICS_TAGS_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             - name: SPRING_KAFKA_CONSUMER_GROUP_ID
               value: "notification-group"
             - name: SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER

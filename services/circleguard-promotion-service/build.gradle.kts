@@ -30,4 +30,5 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.19.3")
     testImplementation("org.testcontainers:neo4j:1.19.3")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus")
 }

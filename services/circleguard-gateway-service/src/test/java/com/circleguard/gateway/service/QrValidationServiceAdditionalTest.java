@@ -1,5 +1,6 @@
 package com.circleguard.gateway.service;
 
+import com.circleguard.gateway.metrics.BusinessMetrics;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -29,7 +30,7 @@ class QrValidationServiceAdditionalTest {
         valueOps = Mockito.mock(ValueOperations.class);
         Mockito.when(redisTemplate.opsForValue()).thenReturn(valueOps);
 
-        service = new QrValidationService(redisTemplate);
+        service = new QrValidationService(redisTemplate, Mockito.mock(BusinessMetrics.class));
         ReflectionTestUtils.setField(service, "qrSecret", secret);
     }
 

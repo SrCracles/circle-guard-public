@@ -1,5 +1,6 @@
 package com.circleguard.form.service;
 
+import com.circleguard.form.metrics.BusinessMetrics;
 import com.circleguard.form.model.HealthSurvey;
 import com.circleguard.form.model.Question;
 import com.circleguard.form.model.Questionnaire;
@@ -38,6 +39,9 @@ class FormToPromotionKafkaTest {
 
     @Mock
     private KafkaTemplate<String, Object> kafkaTemplate;
+
+    @Mock
+    private BusinessMetrics businessMetrics;
 
     @Test
     void submitSurvey_WithSymptoms_EmitsSurveySubmittedEvent() {

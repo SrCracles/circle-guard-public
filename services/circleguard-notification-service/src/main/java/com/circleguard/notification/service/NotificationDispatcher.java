@@ -1,5 +1,6 @@
 package com.circleguard.notification.service;
 
+import com.circleguard.notification.metrics.BusinessMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,9 +17,11 @@ public class NotificationDispatcher {
     private final SmsService smsService;
     private final PushService pushService;
     private final TemplateService templateService;
+    private final BusinessMetrics businessMetrics;
 
     public void dispatch(String userId, String status) {
         log.info("Dispatching contextual multi-channel notifications for user: {} with status: {}", userId, status);
+        businessMetrics.recordNotificationSent();
         
         String emailContent = templateService.generateEmailContent(status, userId);
         String pushContent = templateService.generatePushContent(status);

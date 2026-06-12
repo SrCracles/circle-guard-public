@@ -9,6 +9,18 @@ resources:
   - postgresql.yaml
   - kafka.yaml
   - sonarqube.yaml
+  - kube-state-metrics.yaml
+  - node-exporter.yaml
+  - prometheus.yaml
+  - alert-webhook.yaml
+  - grafana.yaml
+
+configMapGenerator:
+  - name: grafana-dashboards
+    files:
+      - ../../docs/grafana-dashboards/circleguard-system-overview.json
+      - ../../docs/grafana-dashboards/circleguard-service-detail.json
+      - ../../docs/grafana-dashboards/circleguard-business-metrics.json
 
 commonLabels:
   component: infrastructure

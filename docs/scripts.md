@@ -17,7 +17,7 @@ Este script PowerShell automatiza la creacion del entorno local de desarrollo pa
 | **1. Prerequisitos** | Verifica que Docker, Kind y kubectl esten instalados y que Docker este corriendo |
 | **2. Cluster Kind** | Crea el cluster `circleguard-cluster` con 2 nodos (control-plane + worker) y port mappings |
 | **3. Namespaces** | Crea los namespaces: `dev`, `stage`, `master`, `infra` |
-| **4. Infraestructura** | Despliega PostgreSQL, Zookeeper, Kafka, Redis, Neo4j y OpenLDAP en namespace `infra` |
+| **4. Infraestructura** | Despliega PostgreSQL, Zookeeper, Kafka, Redis, Neo4j, OpenLDAP, SonarQube, Prometheus y Grafana en namespace `infra` |
 | **5. Verificacion** | Espera a que los pods de infra esten ready y muestra resumen del estado |
 | **6. Kubeconfig** | Exporta el kubeconfig a `kind-kubeconfig.yaml` para que Jenkins pueda usarlo |
 
@@ -49,6 +49,8 @@ El cluster expone los siguientes puertos del host al container:
 | 30080 | 30080 | control-plane | NodePort alternativo |
 | 30443 | 30443 | control-plane | NodePort alternativo HTTPS |
 | 30180 | 30180 | worker | Worker node port |
+| 9090 | 30091 | control-plane | Prometheus UI |
+| 3000 | 30300 | control-plane | Grafana UI |
 
 ---
 

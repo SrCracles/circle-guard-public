@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alert-webhook-config
+  labels:
+    app: alert-webhook
+    component: infrastructure
+data:
+  hooks.yaml: |
+    - id: grafana-alerts
+      execute-command: /bin/sh
+      command-working-directory: /tmp
+      pass-arguments-to-command:
+        - source: entire-payload
+      include-command-output-in-response: true
+      response-message: Alert received by CircleGuard webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-webhook
+  labels:
+    app: alert-webhook
+    component: infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alert-webhook
+  template:
+    metadata:
+      labels:
+        app: alert-webhook
+        component: infrastructure
+    spec:
+      containers:
+        - name: webhook
+          image: ghcr.io/adnanh/webhook:v2.8.1
+          args:
+            - -verbose
+            - -hooks=/etc/webhook/hooks.yaml
+            - -hotreload
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - name: config
+              mountPath: /etc/webhook
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "25m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+      volumes:
+        - name: config
+          configMap:
+            name: alert-webhook-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-webhook
+  labels:
+    app: alert-webhook
+    component: infrastructure
+spec:
+  ports:
+    - port: 9000
+      targetPort: 9000
+  selector:
+    app: alert-webhook

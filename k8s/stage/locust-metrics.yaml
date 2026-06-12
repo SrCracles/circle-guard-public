@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: locust-perf
+  namespace: stage
+  labels:
+    app: locust-perf
+spec:
+  restartPolicy: Never
+  containers:
+    - name: locust
+      image: locustio/locust:2.29.0
+      command: ["sleep", "3600"]
+      ports:
+        - containerPort: 8089
+          name: web
+    - name: locust-exporter
+      image: containersol/locust_exporter:0.4.0
+      env:
+        - name: LOCUST_HOST
+          value: localhost
+        - name: LOCUST_PORT
+          value: "8089"
+      ports:
+        - containerPort: 9646
+          name: metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locust-exporter
+  namespace: stage
+  labels:
+    app: locust-perf
+spec:
+  selector:
+    app: locust-perf
+  ports:
+    - port: 9646
+      targetPort: 9646
+      name: metrics

@@ -76,6 +76,10 @@ locust -f tests/locustfile-performance.py --host http://localhost:8180 -u 20 -r 
 locust -f tests/locustfile-stress.py --host http://localhost:8180 -u 50 -r 3 --run-time 60s --headless
 ```
 
+## Metricas en Grafana (HU-28)
+
+El pipeline stage despliega Locust junto con `locust-exporter` (`k8s/stage/locust-metrics.yaml`). Prometheus en el namespace `infra` scrapea las metricas de carga y quedan visibles en el dashboard **CircleGuard - System Overview** de Grafana.
+
 ## Ejecucion en Kubernetes (pipeline)
 
 Los tests se ejecutan dentro de pods en el cluster Kind. Los servicios se alcanzan via nombres de servicio K8s:

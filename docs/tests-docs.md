@@ -172,7 +172,19 @@ Para garantizar que el código se mantiene con un estándar alto de calidad con 
 
 ---
 
-## 7. Infraestructura de Análisis Estático para Dev (Paralelismo)
+## 7. Monitoreo y Observabilidad (HU-28, HU-29, HU-31)
+
+- **Prometheus + Grafana** en namespace `infra`: metricas tecnicas de los 8 microservicios via `/actuator/prometheus`.
+- **Dashboards**: vision general, detalle por servicio y metricas de negocio en `docs/grafana-dashboards/`.
+- **Metricas de negocio**: contadores Micrometer para encuestas, promociones CONFIRMED/SUSPECT, accesos GREEN/RED y notificaciones.
+- **Locust en Grafana**: el pipeline stage despliega `locust-exporter` para exponer metricas de carga a Prometheus.
+- **Alertas**: 4 reglas en Grafana (error rate, latencia p95, CrashLoopBackOff, memoria baja) con notificacion webhook.
+
+Ver detalle en [`docs/monitoring.md`](monitoring.md).
+
+---
+
+## 8. Infraestructura de Análisis Estático para Dev (Paralelismo)
 
 Para soportar la ejecución simultánea de los 8 pipelines de desarrollo sin conflictos de puertos ni credenciales dinámicas, se realizaron los siguientes ajustes:
 
