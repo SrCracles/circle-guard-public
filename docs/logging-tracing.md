@@ -80,6 +80,19 @@ Los clientes `RestTemplate` inyectados con `RestTemplateBuilder` propagan header
 2. Buscar en Kibana: `traceId: "<id>"`.
 3. Ver todos los logs de los servicios involucrados en el mismo request.
 
+## Pipelines acelerados (temporal)
+
+Para validar HU-30/HU-32 sin esperar quality gates completos, los Jenkinsfiles tienen stages comentados con `TEMP (HU-30/32 ELK)`:
+
+| Pipeline | Stages activos | Stages comentados |
+|----------|----------------|-------------------|
+| **dev** (`jenkins/dev/Jenkinsfile-*`) | Checkout, Build JAR, Build Docker Image, Push `:dev` | Test (JaCoCo), SonarQube, Trivy |
+| **stage** (`jenkins/stage/Jenkinsfile-stage`) | Checkout, Pull images, Deploy to Stage | Newman E2E, OWASP ZAP, Locust, Promote `:stage` |
+
+Ademas, el `post { success }` de stage **no borra** el namespace `stage` para que los microservicios sigan enviando logs y trazas.
+
+Restaurar los bloques comentados antes de merge a produccion o ejecucion del pipeline master.
+
 ## Despliegue
 
 El stack se instala junto con la infraestructura:

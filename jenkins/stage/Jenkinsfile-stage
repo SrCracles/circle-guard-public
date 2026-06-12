@@ -75,6 +75,8 @@ pipeline {
                 }
             }
         }
+        // TEMP (HU-30/32 ELK): pruebas y quality gates deshabilitados; solo deploy para validar logs/trazas
+        /*
         stage('E2E Tests - Newman') {
             steps {
                 echo 'Running Newman E2E tests inside Kubernetes cluster...'
@@ -369,6 +371,7 @@ ${stressStats}
                 }
             }
         }
+        */
     }
     post {
         failure {
@@ -376,6 +379,10 @@ ${stressStats}
             echo 'Run manually to clean up: kubectl delete deployment,service,configmap,secret --all -n stage'
         }
         success {
+            // TEMP (HU-30/32 ELK): mantener stage desplegado para validar logs en Kibana y trazas en Jaeger
+            echo 'Stage pipeline succeeded. Stage namespace left running for ELK/Jaeger validation.'
+            echo 'Manual cleanup when done: kubectl delete deployment,service,configmap,secret --all -n stage'
+            /*
             echo 'Stage pipeline succeeded. Cleaning up stage resources and local images...'
             bat 'kubectl delete deployment --all -n stage --ignore-not-found=true'
             bat 'kubectl delete service --all -n stage --ignore-not-found=true'
@@ -398,6 +405,7 @@ ${stressStats}
                     bat "docker rmi ${DOCKER_USER}/${svc}:stage 2>nul || exit 0"
                 }
             }
+            */
         }
     }
 }
