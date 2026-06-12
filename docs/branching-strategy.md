@@ -8,7 +8,7 @@ Este documento describe la estrategia de ramas adoptada en el repositorio `circl
 
 Para CircleGuard se eligió **GitFlow adaptado**. El proyecto no usa GitHub Flow, porque ese modelo asume una única rama principal y despliegues continuos desde ella; aquí conviven tres ambientes (`dev`, `stage`, `master`) con validaciones intermedias (pruebas E2E, OWASP ZAP, Locust) antes de llegar a producción.
 
-Tampoco se aplicó GitFlow en su forma clásica. Se conservan sus ideas centrales —rama de integración (`develop`), rama de producción (`master`), ramas de trabajo (`feature/*`, `hotfix/*`)— pero se sustituyen las ramas efímeras `release/*` por una rama permanente `stage`, alineada con el namespace de pre-producción y el pipeline `circle-guard-stage`.
+Tampoco se aplicó GitFlow en su forma clásica. Se conservan sus ideas centrales - rama de integración (`develop`), rama de producción (`master`), ramas de trabajo (`feature/*`, `hotfix/*`) - pero se sustituyen las ramas efímeras `release/*` por una rama permanente `stage`, alineada con el namespace de pre-producción y el pipeline `circle-guard-stage`.
 
 En la práctica, el flujo queda así:
 
